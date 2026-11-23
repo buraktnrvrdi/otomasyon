@@ -9,10 +9,11 @@ interface Isletme {
   telefon: string;
   adres: string;
   ikon: string;
+  whatsapp_no: string;
 }
 
 export default function IsletmePage() {
-  const [form, setForm] = useState<Isletme>({ ad: "", telefon: "", adres: "", ikon: "🏪" });
+  const [form, setForm] = useState<Isletme>({ ad: "", telefon: "", adres: "", ikon: "🏪", whatsapp_no: "" });
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
@@ -28,6 +29,7 @@ export default function IsletmePage() {
           telefon: d.telefon ?? "",
           adres: d.adres ?? "",
           ikon: d.ikon ?? "🏪",
+          whatsapp_no: d.whatsapp_no ?? "",
         });
         setYukleniyor(false);
       })
@@ -105,6 +107,20 @@ export default function IsletmePage() {
               value={form.telefon}
               onChange={(e) => setForm({ ...form, telefon: e.target.value })}
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+              WhatsApp Bot Numarasi
+            </label>
+            <input
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              placeholder="+905551234567"
+              value={form.whatsapp_no}
+              onChange={(e) => setForm({ ...form, whatsapp_no: e.target.value })}
+            />
+            <p className="text-xs text-gray-400 mt-1.5">
+              Musterilerin mesaj attigi numara. Gelen mesajlar bu numaraya gore isletmenize yonlendirilir.
+            </p>
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">

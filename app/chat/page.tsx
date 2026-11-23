@@ -15,6 +15,7 @@ export default function ChatPage() {
   const [yukleniyor, setYukleniyor] = useState(false);
   const [oturum, setOturum] = useState<string | null>(null);
   const [isletmeAdi, setIsletmeAdi] = useState("Randevu Botu");
+  const [isletmeId, setIsletmeId] = useState<string | null>(null);
   const altRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,12 +25,24 @@ export default function ChatPage() {
   useEffect(() => {
     fetch("/api/admin/isletme")
       .then((r) => r.json())
-      .then((d) => { if (d.ad) setIsletmeAdi(d.ad); });
+      .then((d) => {
+        if (d.id) setIsletmeId(d.id);
+        if (d.ad) setIsletmeAdi(d.ad);
+      })
+      .catch(() => {});
   }, []);
 
   async function gonder() {
     const metin = girdi.trim();
     if (!metin || yukleniyor) return;
+
+    if (!isletmeId) {
+      setMesajlar((m) => [
+        ...m,
+        { rol: "bot", metin: "Test modu için önce admin panelinden giriş yapın." },
+      ]);
+      return;
+    }
 
     setGirdi("");
     setMesajlar((m) => [...m, { rol: "kullanici", metin }]);
@@ -39,7 +52,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mesaj: metin, oturum }),
+        body: JSON.stringify({ mesaj: metin, oturum, isletme_id: isletmeId }),
       });
       const data = await res.json();
 

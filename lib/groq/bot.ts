@@ -1,44 +1,12 @@
 import Groq from "groq-sdk";
 import { toolCalistir } from "@/lib/anthropic/tool-executor";
-import { createServerClient } from "@/lib/supabase/server";
+import { bugunIstanbul, isletmeAdi, konusmaGetir, konusmaKaydet } from "@/lib/konusma";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const MAKS_TUR = 8;
 
-async function konusmaGetir(isletmeId: string, musteriNo: string): Promise<Groq.Chat.ChatCompletionMessageParam[]> {
-  const supabase = await createServerClient();
-  const { data } = await supabase
-    .from("konusmalar")
-    .select("mesajlar")
-    .eq("isletme_id", isletmeId)
-    .eq("musteri_no", musteriNo)
-    .single();
-  return (data?.mesajlar as Groq.Chat.ChatCompletionMessageParam[]) ?? [];
-}
-
-async function konusmaKaydet(isletmeId: string, musteriNo: string, mesajlar: Groq.Chat.ChatCompletionMessageParam[]) {
-  const supabase = await createServerClient();
-  await supabase
-    .from("konusmalar")
-    .upsert(
-      {
-        isletme_id: isletmeId,
-        musteri_no: musteriNo,
-        mesajlar: mesajlar.slice(-20),
-        guncellendi_at: new Date().toISOString(),
-      },
-      { onConflict: "isletme_id,musteri_no" }
-    );
-}
-
-async function isletmeAdi(isletmeId: string): Promise<string> {
-  const supabase = await createServerClient();
-  const { data } = await supabase
-    .from("isletme")
-    .select("ad")
-    .eq("id", isletmeId)
-    .single();
-  return data?.ad ?? "Kuaför";
-}
+type Mesaj = Groq.Chat.ChatCompletionMessageParam;
+const kullaniciMesajiMi = (m: Mesaj) => m.role === "user";
 
 function sistemPrompt(musteriNo: string, isletme: string) {
   return `\
@@ -59,7 +27,7 @@ Kurallar:
 1. Randevu almadan önce mutlaka bos_saat_bak ile o saatin boş olduğunu doğrula.
 2. Müşteriden sadece adını, hizmet türünü ve tarih/saat tercihini iste. Numara sorma.
 3. Hizmet adından ID'yi bilmiyorsan önce hizmetleri_listele ile listele.
-4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Bugünün tarihi: ${new Date().toISOString().split("T")[0]}.
+4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Bugünün tarihi: ${bugunIstanbul()}.
 5. Hiçbir zaman hayali saat veya randevu bilgisi üretme.
 6. İptal işleminde önce randevularim_listele ile müşterinin aktif randevularını getir, onayını al, sonra iptal et.
 7. Boş saat listesini sunarken düz saat formatında ver: "09:00, 09:30, 10:00..." şeklinde.
@@ -141,13 +109,13 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
 
 export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, isletmeId: string): Promise<string> {
   const [mesajlar, isletme] = await Promise.all([
-    konusmaGetir(isletmeId, musteriNo),
+    konusmaGetir<Mesaj>(isletmeId, musteriNo),
     isletmeAdi(isletmeId),
   ]);
 
   mesajlar.push({ role: "user", content: gelenMesaj });
 
-  while (true) {
+  for (let tur = 0; tur < MAKS_TUR; tur++) {
     const yanit = await groq.chat.completions.create({
       model: "qwen/qwen3.8-27b",
       max_tokens: 1024,
@@ -171,7 +139,7 @@ export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, islet
     }
   }
 
-  await konusmaKaydet(isletmeId, musteriNo, mesajlar);
+  await konusmaKaydet(isletmeId, musteriNo, mesajlar, kullaniciMesajiMi);
 
   const sonMesaj = mesajlar.at(-1);
   if (sonMesaj?.role === "assistant" && typeof sonMesaj.content === "string") {

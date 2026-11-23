@@ -24,6 +24,15 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "hizmetleri_listele",
+    description:
+      "Salondaki tüm aktif hizmetleri, ID'lerini, sürelerini ve fiyatlarını listeler.",
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
     name: "randevu_olustur",
     description: `
       Yeni bir randevu kaydı oluşturur. Çağırmadan önce:

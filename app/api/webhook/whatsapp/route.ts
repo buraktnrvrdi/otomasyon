@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { botYaniti } from "@/lib/anthropic/bot";
 import { mesajGonder } from "@/lib/whatsapp/sender";
 import { parseTwilioPayload, parseMetaPayload } from "@/lib/whatsapp/parser";
+import type { WhatsAppMessage } from "@/lib/whatsapp/types";
+import { createServerClient } from "@/lib/supabase/server";
+
+async function isletmeBul(isletmeNo: string): Promise<string | null> {
+  if (isletmeNo) {
+    const supabase = await createServerClient();
+    const { data } = await supabase
+      .from("isletme")
+      .select("id")
+      .eq("whatsapp_no", isletmeNo)
+      .maybeSingle();
+    if (data?.id) return data.id;
+  }
+  return process.env.DEFAULT_ISLETME_ID || null;
+}
 
 // Meta Cloud API webhook doğrulama
 export async function GET(req: NextRequest) {
@@ -20,31 +35,27 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") ?? "";
-    let musteriNo: string;
-    let metin: string;
+    let payload: WhatsAppMessage | null;
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
-      // Twilio
-      const form = await req.formData();
-      const payload = parseTwilioPayload(form);
-      if (!payload) return NextResponse.json({ ok: true });
-      musteriNo = payload.from;
-      metin = payload.text;
+      payload = parseTwilioPayload(await req.formData());
     } else {
-      // Meta Cloud API
-      const body = await req.json();
-      const payload = parseMetaPayload(body);
-      if (!payload) return NextResponse.json({ ok: true });
-      musteriNo = payload.from;
-      metin = payload.text;
+      payload = parseMetaPayload(await req.json());
     }
 
-    if (!metin?.trim()) return NextResponse.json({ ok: true });
+    if (!payload?.text) return NextResponse.json({ ok: true });
 
-    // TODO: multi-tenant — isletme_id'yi telefon numarasından çöz
-    const isletmeId = process.env.DEFAULT_ISLETME_ID ?? "";
-    const yanitMetni = await botYaniti(musteriNo, metin, isletmeId);
-    await mesajGonder(musteriNo, yanitMetni);
+    const isletmeId = await isletmeBul(payload.to);
+    if (!isletmeId) {
+      console.error("[Webhook] Numaraya bagli isletme yok:", payload.to);
+      return NextResponse.json({ ok: true });
+    }
+
+    const yanitMetni = await botYaniti(payload.from, payload.text, isletmeId);
+    await mesajGonder(payload.from, yanitMetni, {
+      numara: payload.to,
+      phoneNumberId: payload.phoneNumberId,
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {
