@@ -7,7 +7,7 @@ interface Gonderen {
   phoneNumberId?: string;
 }
 
-const saglayici = () => process.env.WHATSAPP_PROVIDER ?? "twilio";
+const saglayici = () => process.env.WHATSAPP_PROVIDER || "meta";
 
 /** Telefon için `to`, BSUID için `recipient` alanı (Meta, numarası gizli kullanıcılara böyle gönderilir). */
 function metaHedef(kimlik: string): Record<string, string> {
@@ -87,9 +87,15 @@ async function twilioPost(numara: string | undefined, to: string, alanlar: Recor
   if (!res.ok) throw new Error(`Twilio gönderim hatası: ${await res.text()}`);
 }
 
+/** Eski Graph sürümleri Meta tarafından kapatılır; gerekirse ortam değişkeniyle güncellenir. */
+const GRAPH_SURUMU = () => process.env.META_GRAPH_VERSION || "v24.0";
+
 async function metaPost(phoneNumberId: string | undefined, govde: Record<string, unknown>) {
   const phoneId = phoneNumberId ?? process.env.META_PHONE_NUMBER_ID;
-  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
+  if (!phoneId || !process.env.META_ACCESS_TOKEN) {
+    throw new Error("Meta ayarlari eksik: META_ACCESS_TOKEN ve META_PHONE_NUMBER_ID gerekli.");
+  }
+  const res = await fetch(`https://graph.facebook.com/${GRAPH_SURUMU()}/${phoneId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
@@ -99,4 +105,8 @@ async function metaPost(phoneNumberId: string | undefined, govde: Record<string,
   });
 
   if (!res.ok) throw new Error(`Meta API gönderim hatası: ${await res.text()}`);
+
+  // Teslim bildirimiyle eşleştirebilmek için Meta'nın verdiği mesaj kimliğini logla.
+  const json = await res.json().catch(() => null);
+  console.log(`[WA gonderildi] id=${json?.messages?.[0]?.id ?? "?"} tur=${govde.type}`);
 }

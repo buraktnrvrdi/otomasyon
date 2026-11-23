@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { botYaniti } from "@/lib/bot";
 import { mesajGonder } from "@/lib/whatsapp/sender";
-import { parseTwilioPayload, parseMetaPayload } from "@/lib/whatsapp/parser";
-import type { WhatsAppMessage } from "@/lib/whatsapp/types";
+import { parseTwilioPayload, parseMetaPayload, parseMetaDurumlari } from "@/lib/whatsapp/parser";
+import type { WhatsAppDurum, WhatsAppMessage } from "@/lib/whatsapp/types";
 import { metaImzaGecerli, twilioImzaGecerli } from "@/lib/whatsapp/signature";
 import { createServerClient } from "@/lib/supabase/server";
 
@@ -23,6 +23,33 @@ async function isletmeBul(isletmeNo: string, phoneNumberId?: string): Promise<st
     }
   }
   return process.env.DEFAULT_ISLETME_ID || null;
+}
+
+const DESTEKLENMEYEN_YANIT =
+  "Şu an sadece yazılı mesajları anlayabiliyorum. Randevu için lütfen isteğinizi yazarak gönderin.";
+
+/** Logda tam numara görünmesin: +9053****4567 */
+function maskele(kimlik: string): string {
+  if (kimlik.length <= 8) return kimlik;
+  return kimlik.slice(0, 5) + "****" + kimlik.slice(-4);
+}
+
+/**
+ * Meta, gönderdiğimiz her mesaj için ayrıca sent/delivered/read/failed bildirir.
+ * Mesaj müşteriye ulaşmadığında nedenini Vercel loglarında bu satırlardan görürüz.
+ */
+function durumlariLogla(durumlar: WhatsAppDurum[]) {
+  for (const d of durumlar) {
+    const satir = `[WA durum] ${d.durum} id=${d.mesajId} alici=${maskele(d.alici)}`;
+    if (d.durum === "failed") {
+      const neden = d.hatalar
+        .map((h) => `code=${h.kod ?? "?"} "${h.baslik}"${h.detay ? ` (${h.detay})` : ""}`)
+        .join("; ");
+      console.error(`${satir} ${neden || "neden belirtilmedi"}`);
+    } else {
+      console.log(satir);
+    }
+  }
 }
 
 // Meta Cloud API webhook doğrulama
@@ -64,10 +91,12 @@ export async function POST(req: NextRequest) {
         console.error("[Webhook] Gecersiz Meta imzasi");
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      payload = parseMetaPayload(JSON.parse(hamGovde));
+      const govde = JSON.parse(hamGovde);
+      durumlariLogla(parseMetaDurumlari(govde));
+      payload = parseMetaPayload(govde);
     }
 
-    if (!payload?.text) return NextResponse.json({ ok: true });
+    if (!payload || (!payload.text && !payload.desteklenmeyen)) return NextResponse.json({ ok: true });
 
     const isletmeId = await isletmeBul(payload.to, payload.phoneNumberId);
     if (!isletmeId) {
@@ -75,7 +104,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const yanitMetni = await botYaniti(payload.from, payload.text, isletmeId);
+    const yanitMetni = payload.text
+      ? await botYaniti(payload.from, payload.text, isletmeId)
+      : DESTEKLENMEYEN_YANIT;
     await mesajGonder(payload.from, yanitMetni, {
       numara: payload.to,
       phoneNumberId: payload.phoneNumberId,
