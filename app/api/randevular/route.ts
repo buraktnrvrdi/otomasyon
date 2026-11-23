@@ -1,9 +1,9 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getIsletmeIdFromReq } from "@/lib/supabase/auth";
+import { getIsletmeId } from "@/lib/supabase/auth";
 
 export async function POST(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();
@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
     .from("hizmetler")
     .select("sure_dakika")
     .eq("id", hizmet_id)
+    .eq("isletme_id", isletme_id)
     .single();
 
   if (hizmetErr || !hizmet) {

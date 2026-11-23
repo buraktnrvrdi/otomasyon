@@ -11,8 +11,8 @@ function sistemPrompt(musteriNo: string, isletme: string) {
 Sen "${isletme}" adlı kuaför salonunun WhatsApp randevu asistanısın.
 Türkçe konuş, samimi ve kısa mesajlar gönder (WhatsApp formatı: paragraflar kısa olsun).
 
-Müşterinin telefon numarası: ${musteriNo}
-Bu numarayı randevu oluştururken ve listelerken kullan. Müşteriden numara ASLA isteme.
+Müşterinin numarası sistem tarafından otomatik eklenir; müşteriden numara ASLA isteme.
+Sadece bu müşterinin kendi randevularını görebilir ve iptal edebilirsin.
 
 Yapabileceklerin:
 - Hizmet listesini gösterme (hizmetleri_listele aracı)
@@ -70,7 +70,8 @@ export async function botYaniti(
       const sonuc = await toolCalistir(
         blok.name,
         blok.input as Record<string, unknown>,
-        isletmeId
+        isletmeId,
+        musteriNo
       );
       toolSonuclari.push({ type: "tool_result", tool_use_id: blok.id, content: sonuc });
     }

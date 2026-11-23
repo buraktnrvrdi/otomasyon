@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { getIsletmeIdFromReq } from "@/lib/supabase/auth";
+import { getIsletmeId } from "@/lib/supabase/auth";
+
+const DUZENLENEBILIR = ["ad", "sure_dakika", "fiyat", "aktif"] as const;
+
+function hizmetAlanlari(body: Record<string, unknown>) {
+  return Object.fromEntries(
+    DUZENLENEBILIR.filter((k) => k in body).map((k) => [k, body[k]])
+  );
+}
 
 export async function GET(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();
@@ -18,7 +26,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();
@@ -26,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("hizmetler")
-    .insert({ ...body, isletme_id })
+    .insert({ ...hizmetAlanlari(body), isletme_id })
     .select()
     .single();
 
@@ -35,7 +43,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();
@@ -43,7 +51,7 @@ export async function PATCH(req: NextRequest) {
 
   const { error } = await supabase
     .from("hizmetler")
-    .update(body)
+    .update(hizmetAlanlari(body))
     .eq("id", id)
     .eq("isletme_id", isletme_id);
 
@@ -52,7 +60,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();

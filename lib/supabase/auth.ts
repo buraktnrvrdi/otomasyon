@@ -1,6 +1,6 @@
 import { createServerClient as _createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { NextRequest } from "next/server";
+import { createServerClient } from "./server";
 
 export async function createAuthClient() {
   const cookieStore = await cookies();
@@ -22,14 +22,20 @@ export async function createAuthClient() {
   );
 }
 
-// Server component'lerde kullan
+/**
+ * Giriş yapmış kullanıcının işletmesi. İstemcinin gönderdiği bir değere
+ * (cookie, body) asla güvenilmez; her istekte oturum Supabase'de doğrulanır.
+ */
 export async function getIsletmeId(): Promise<string | null> {
-  const cookieStore = await cookies();
-  return cookieStore.get("isletme_id")?.value ?? null;
-}
+  const auth = await createAuthClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) return null;
 
-// Route handler'larda kullan (login'de set edilen cookie'den okur)
-export function getIsletmeIdFromReq(req: NextRequest): string | null {
-  return req.cookies.get("isletme_id")?.value ?? null;
+  const db = await createServerClient();
+  const { data } = await db
+    .from("isletme")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  return data?.id ?? null;
 }
-

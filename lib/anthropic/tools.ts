@@ -46,10 +46,6 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
           type: "string",
           description: "Müşterinin adı soyadı",
         },
-        musteri_whatsapp: {
-          type: "string",
-          description: "Müşterinin WhatsApp numarası (+90 ile başlamalı)",
-        },
         hizmet_id: {
           type: "string",
           description: "Seçilen hizmetin UUID'si",
@@ -63,7 +59,7 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
           description: "Opsiyonel müşteri notu",
         },
       },
-      required: ["musteri_ad", "musteri_whatsapp", "hizmet_id", "baslangic"],
+      required: ["musteri_ad", "hizmet_id", "baslangic"],
     },
   },
   {
@@ -96,13 +92,7 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
     `,
     input_schema: {
       type: "object" as const,
-      properties: {
-        musteri_whatsapp: {
-          type: "string",
-          description: "Müşterinin WhatsApp numarası",
-        },
-      },
-      required: ["musteri_whatsapp"],
+      properties: {},
     },
   },
 ];

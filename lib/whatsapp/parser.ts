@@ -5,7 +5,7 @@ export function numaraNormalize(no: string): string {
   return rakamlar ? "+" + rakamlar : "";
 }
 
-export function parseTwilioPayload(form: FormData): WhatsAppMessage | null {
+export function parseTwilioPayload(form: URLSearchParams): WhatsAppMessage | null {
   const from = form.get("From")?.toString();
   const to = form.get("To")?.toString();
   const body = form.get("Body")?.toString();

@@ -8,13 +8,13 @@ const MAKS_TUR = 8;
 type Mesaj = Groq.Chat.ChatCompletionMessageParam;
 const kullaniciMesajiMi = (m: Mesaj) => m.role === "user";
 
-function sistemPrompt(musteriNo: string, isletme: string) {
+function sistemPrompt(isletme: string) {
   return `\
 Sen "${isletme}" adlı kuaför salonunun WhatsApp randevu asistanısın.
 Türkçe konuş, samimi ve kısa mesajlar gönder.
 
-Müşterinin telefon numarası: ${musteriNo}
-Bu numarayı randevu oluştururken ve listelerken kullan. Müşteriden numara ASLA isteme.
+Müşterinin numarası sistem tarafından otomatik eklenir; müşteriden numara ASLA isteme.
+Sadece bu müşterinin kendi randevularını görebilir ve iptal edebilirsin.
 
 Yapabileceklerin:
 - Hizmet listesini gösterme (hizmetleri_listele aracı)
@@ -59,12 +59,11 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
         type: "object",
         properties: {
           musteri_ad: { type: "string", description: "Müşterinin adı soyadı" },
-          musteri_whatsapp: { type: "string", description: "WhatsApp numarası (+90 ile)" },
           hizmet_id: { type: "string", description: "Hizmet UUID'si" },
           baslangic: { type: "string", description: "ISO 8601 başlangıç zamanı" },
           notlar: { type: "string", description: "Opsiyonel not" },
         },
-        required: ["musteri_ad", "musteri_whatsapp", "hizmet_id", "baslangic"],
+        required: ["musteri_ad", "hizmet_id", "baslangic"],
       },
     },
   },
@@ -96,13 +95,7 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
     function: {
       name: "randevularim_listele",
       description: "Müşterinin aktif randevularını listeler.",
-      parameters: {
-        type: "object",
-        properties: {
-          musteri_whatsapp: { type: "string", description: "Müşterinin WhatsApp numarası" },
-        },
-        required: ["musteri_whatsapp"],
-      },
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
 ];
@@ -119,7 +112,7 @@ export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, islet
     const yanit = await groq.chat.completions.create({
       model: "qwen/qwen3.8-27b",
       max_tokens: 1024,
-      messages: [{ role: "system", content: sistemPrompt(musteriNo, isletme) }, ...mesajlar],
+      messages: [{ role: "system", content: sistemPrompt(isletme) }, ...mesajlar],
       tools: TOOLS,
       tool_choice: "auto",
     });
@@ -130,11 +123,13 @@ export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, islet
     if (yanit.choices[0].finish_reason === "stop" || !mesaj.tool_calls?.length) break;
 
     for (const toolCall of mesaj.tool_calls) {
-      const sonuc = await toolCalistir(
-        toolCall.function.name,
-        JSON.parse(toolCall.function.arguments),
-        isletmeId
-      );
+      let girdi: Record<string, unknown>;
+      try {
+        girdi = JSON.parse(toolCall.function.arguments || "{}");
+      } catch {
+        girdi = {};
+      }
+      const sonuc = await toolCalistir(toolCall.function.name, girdi, isletmeId, musteriNo);
       mesajlar.push({ role: "tool", tool_call_id: toolCall.id, content: sonuc });
     }
   }

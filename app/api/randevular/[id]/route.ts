@@ -1,19 +1,29 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getIsletmeIdFromReq } from "@/lib/supabase/auth";
+import { getIsletmeId } from "@/lib/supabase/auth";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();
   const body = await req.json().catch(() => ({}));
 
   if (body.baslangic) {
+    if (body.hizmet_id) {
+      const { data: hizmet } = await supabase
+        .from("hizmetler")
+        .select("id")
+        .eq("id", body.hizmet_id)
+        .eq("isletme_id", isletme_id)
+        .maybeSingle();
+      if (!hizmet) return NextResponse.json({ error: "Hizmet bulunamadi" }, { status: 404 });
+    }
+
     const { error } = await supabase
       .from("randevular")
       .update({

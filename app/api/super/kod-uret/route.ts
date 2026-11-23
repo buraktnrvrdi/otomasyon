@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { SUPER_COOKIE, oturumGecerliMi } from "@/lib/super-session";
 
 function rastgeleKod(): string {
+  // 32 karakter: bayt % 32 eşit dağılır.
   const karakterler = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  return Array.from({ length: 8 }, () =>
-    karakterler[Math.floor(Math.random() * karakterler.length)]
-  ).join("");
+  const baytlar = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(baytlar, (b) => karakterler[b % 32]).join("");
 }
 
 export async function POST(req: NextRequest) {
-  const session = req.cookies.get("super_session")?.value;
-  if (session !== process.env.SUPER_ADMIN_PASSWORD) {
+  if (!(await oturumGecerliMi(req.cookies.get(SUPER_COOKIE)?.value))) {
     return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
   }
 

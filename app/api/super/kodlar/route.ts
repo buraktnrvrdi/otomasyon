@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { SUPER_COOKIE, oturumGecerliMi } from "@/lib/super-session";
 
 export async function GET(req: NextRequest) {
-  const session = req.cookies.get("super_session")?.value;
-  if (session !== process.env.SUPER_ADMIN_PASSWORD) {
+  if (!(await oturumGecerliMi(req.cookies.get(SUPER_COOKIE)?.value))) {
     return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
   }
 
