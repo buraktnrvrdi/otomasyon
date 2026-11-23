@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { numaraNormalize } from "@/lib/whatsapp/parser";
+import { ikonGecerliMi } from "@/lib/isletme-ikon";
 
 export async function GET(req: NextRequest) {
   const isletme_id = await getIsletmeId();
@@ -25,6 +26,10 @@ export async function PATCH(req: NextRequest) {
 
   const supabase = await createServerClient();
   const body = await req.json();
+
+  if (body.ikon !== undefined && !ikonGecerliMi(body.ikon)) {
+    return NextResponse.json({ hata: "Gecersiz simge." }, { status: 400 });
+  }
 
   const whatsapp_no = numaraNormalize(body.whatsapp_no ?? "") || null;
 

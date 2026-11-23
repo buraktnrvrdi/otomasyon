@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "./Logo";
+import IsletmeLogosu from "./IsletmeLogosu";
 import {
   ArtiIkon,
   CikisIkon,
@@ -29,7 +30,7 @@ const MENU = [
 
 export default function PanelKabugu({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isletme, setIsletme] = useState<{ ad: string; ikon: string } | null>(null);
+  const [isletme, setIsletme] = useState<{ ad: string; ikon: string | null; logoUrl: string | null } | null>(null);
   const mobilMenuRef = useRef<HTMLElement>(null);
 
   // Mobil menüde aktif sayfayı görünür alana kaydır (sayfayı dikeyde oynatmadan).
@@ -44,7 +45,7 @@ export default function PanelKabugu({ children }: { children: React.ReactNode })
   useEffect(() => {
     fetch("/api/admin/isletme")
       .then((r) => r.json())
-      .then((d) => { if (d?.ad) setIsletme({ ad: d.ad, ikon: d.ikon ?? "🏪" }); })
+      .then((d) => { if (d?.ad) setIsletme({ ad: d.ad, ikon: d.ikon ?? null, logoUrl: d.logo_url ?? null }); })
       .catch(() => {});
   }, []);
 
@@ -65,7 +66,7 @@ export default function PanelKabugu({ children }: { children: React.ReactNode })
 
         {isletme && (
           <div className="mx-3 mb-3 flex items-center gap-3 rounded-2xl bg-yuzey-2 px-3 py-2.5">
-            <span className="text-xl">{isletme.ikon}</span>
+            <IsletmeLogosu ad={isletme.ad} ikon={isletme.ikon} logoUrl={isletme.logoUrl} boyut="sm" />
             <div className="min-w-0">
               <p className="text-sm font-semibold truncate">{isletme.ad}</p>
               <p className="text-xs text-silik">Salon paneli</p>

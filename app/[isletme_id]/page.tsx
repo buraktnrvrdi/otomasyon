@@ -14,11 +14,11 @@ export default async function IsletmeChatPage({
 
   const { data: isletme } = await supabase
     .from("isletme")
-    .select("id, ad")
+    .select("*")
     .eq("id", isletme_id)
     .single();
 
   if (!isletme) return notFound();
 
-  return <ChatUI isletmeId={isletme.id} isletmeAdi={isletme.ad} />;
+  return <ChatUI isletmeId={isletme.id} isletmeAdi={isletme.ad} ikon={isletme.ikon} logoUrl={isletme.logo_url ?? null} />;
 }
