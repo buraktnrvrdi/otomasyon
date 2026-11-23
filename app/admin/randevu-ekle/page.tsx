@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import SayfaBasligi from "@/components/SayfaBasligi";
 
 interface Hizmet {
   id: string;
@@ -22,23 +24,19 @@ export default function RandevuEklePage() {
   });
   const [yukleniyor, setYukleniyor] = useState(false);
   const [hata, setHata] = useState("");
-  const [hizmetHata, setHizmetHata] = useState("");
+  const [hizmetYok, setHizmetYok] = useState(false);
   const [basari, setBasari] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/hizmetler")
       .then((r) => r.json())
       .then((data) => {
-        if (!Array.isArray(data)) {
-          setHizmetHata("Hizmetler yuklenemedi. Once Hizmetler sayfasindan hizmet ekleyin.");
-          return;
-        }
-        const aktif = data.filter((h) => h.aktif !== false);
+        const aktif = Array.isArray(data) ? data.filter((h) => h.aktif !== false) : [];
         setHizmetler(aktif);
         if (aktif.length > 0) setForm((f) => ({ ...f, hizmet_id: aktif[0].id }));
-        else setHizmetHata("Henuz hizmet eklenmemis. Once Hizmetler sayfasindan hizmet ekleyin.");
+        else setHizmetYok(true);
       })
-      .catch(() => setHizmetHata("Hizmetler yuklenemedi."));
+      .catch(() => setHizmetYok(true));
   }, []);
 
   async function kaydet(e: React.FormEvent) {
@@ -56,8 +54,8 @@ export default function RandevuEklePage() {
     setYukleniyor(false);
 
     if (!res.ok) {
-      const json = await res.json();
-      setHata(json.error || "Bir hata olustu");
+      const json = await res.json().catch(() => ({}));
+      setHata(json.error || "Bir hata oluştu.");
       return;
     }
 
@@ -66,106 +64,100 @@ export default function RandevuEklePage() {
     setTimeout(() => router.push("/dashboard"), 1500);
   }
 
+  const secili = hizmetler.find((h) => h.id === form.hizmet_id);
+
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-1">Randevu Ekle</h1>
-      <p className="text-gray-400 text-sm mb-6">Manuel olarak yeni randevu olusturun</p>
+      <SayfaBasligi baslik="Yeni" vurgu="randevu" aciklama="Telefonla ya da yüz yüze alınan randevuları buradan ekle" />
 
-      <form onSubmit={kaydet} className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-            Musteri Adi
-          </label>
-          <input
-            required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-            placeholder="Ad Soyad"
-            value={form.musteri_ad}
-            onChange={(e) => setForm({ ...form, musteri_ad: e.target.value })}
-          />
+      <form onSubmit={kaydet} className="kart p-6 space-y-5 max-w-2xl">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label className="etiket" htmlFor="ad">Müşteri Adı</label>
+            <input
+              id="ad"
+              required
+              className="girdi"
+              placeholder="Ad Soyad"
+              value={form.musteri_ad}
+              onChange={(e) => setForm({ ...form, musteri_ad: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="etiket" htmlFor="tel">WhatsApp Numarası</label>
+            <input
+              id="tel"
+              required
+              inputMode="tel"
+              className="girdi"
+              placeholder="0555 123 45 67"
+              value={form.musteri_whatsapp}
+              onChange={(e) => setForm({ ...form, musteri_whatsapp: e.target.value })}
+            />
+          </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-            WhatsApp Numarasi
-          </label>
-          <input
-            required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-            placeholder="+905551234567"
-            value={form.musteri_whatsapp}
-            onChange={(e) => setForm({ ...form, musteri_whatsapp: e.target.value })}
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-            Hizmet
-          </label>
-          {hizmetHata ? (
-            <p className="text-sm text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-              {hizmetHata}
+          <label className="etiket" htmlFor="hizmet">Hizmet</label>
+          {hizmetYok ? (
+            <p className="uyari-kutusu uyari-bilgi">
+              Henüz aktif hizmet yok.{" "}
+              <Link href="/admin/hizmetler" className="font-semibold underline">Önce hizmet ekle</Link>
             </p>
           ) : (
             <select
+              id="hizmet"
               required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              className="girdi"
               value={form.hizmet_id}
               onChange={(e) => setForm({ ...form, hizmet_id: e.target.value })}
             >
               {hizmetler.map((h) => (
                 <option key={h.id} value={h.id}>
-                  {h.ad} — {h.sure_dakika} dk — {h.fiyat} TL
+                  {h.ad} · {h.sure_dakika} dk · {h.fiyat} ₺
                 </option>
               ))}
             </select>
           )}
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              Tarih
-            </label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="etiket" htmlFor="tarih">Tarih</label>
             <input
+              id="tarih"
               type="date"
               required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              className="girdi"
               value={form.tarih}
               onChange={(e) => setForm({ ...form, tarih: e.target.value })}
             />
           </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              Saat
-            </label>
+          <div>
+            <label className="etiket" htmlFor="saat">Saat</label>
             <input
+              id="saat"
               type="time"
               required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              className="girdi"
               value={form.saat}
               onChange={(e) => setForm({ ...form, saat: e.target.value })}
             />
           </div>
         </div>
 
-        {hata && (
-          <p className="text-sm text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-            {hata}
-          </p>
-        )}
-        {basari && (
-          <p className="text-sm text-green-600 bg-green-50 border border-green-100 rounded-lg px-3 py-2">
-            Randevu olusturuldu. Yonlendiriliyor...
+        {secili && form.saat && (
+          <p className="text-sm text-soluk">
+            Süre <span className="text-metin font-semibold">{secili.sure_dakika} dk</span> · Ücret{" "}
+            <span className="text-metin font-semibold">{secili.fiyat} ₺</span>
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={yukleniyor}
-          className="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-gray-800 transition-colors"
-        >
-          {yukleniyor ? "Kaydediliyor..." : "Randevu Olustur"}
+        {hata && <p className="uyari-kutusu uyari-hata">{hata}</p>}
+        {basari && <p className="uyari-kutusu uyari-basari">Randevu oluşturuldu. Randevulara yönlendiriliyorsun...</p>}
+
+        <button type="submit" disabled={yukleniyor || hizmetYok} className="btn btn-ana">
+          {yukleniyor ? "Kaydediliyor..." : "Randevu Oluştur"}
         </button>
       </form>
     </div>

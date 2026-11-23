@@ -25,26 +25,22 @@ export default function GelmediButonu({ id, durum }: Props) {
     setYukleniyor(false);
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setHata(json.error ?? "Bir hata olustu.");
+      setHata(json.error ?? "Bir hata oluştu.");
       return;
     }
     router.refresh();
   }
 
   return (
-    <div className="flex flex-col items-end">
+    <div className="flex flex-col items-start sm:items-end">
       <button
         onClick={degistir}
         disabled={yukleniyor}
-        className={`text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40 ${
-          gelmedi
-            ? "border-gray-200 text-gray-500 hover:bg-gray-50"
-            : "border-orange-200 text-orange-600 hover:bg-orange-50"
-        }`}
+        className={`btn btn-kucuk ${gelmedi ? "btn-cizgili" : "btn-cizgili text-turuncu-acik border-turuncu/35"}`}
       >
-        {yukleniyor ? "..." : gelmedi ? "Geldi olarak isaretle" : "Gelmedi"}
+        {yukleniyor ? "..." : gelmedi ? "Geldi olarak işaretle" : "Gelmedi"}
       </button>
-      {hata && <p className="text-xs text-red-500 mt-1">{hata}</p>}
+      {hata && <p className="text-xs text-hata mt-1">{hata}</p>}
     </div>
   );
 }

@@ -1,9 +1,11 @@
 export const instant = false;
+export const metadata = { title: "Müşteriler" };
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { tarihSaatMetni } from "@/lib/utils/zaman";
 import { redirect } from "next/navigation";
+import SayfaBasligi from "@/components/SayfaBasligi";
 
 interface MusteriSatir {
   musteri_ad: string;
@@ -49,41 +51,48 @@ export default async function MusterilerPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-1">Musteriler</h1>
-      <p className="text-gray-400 text-sm mb-6">
-        Toplam {musteriler.length} musteri
-      </p>
+      <SayfaBasligi
+        baslik="Müşteriler"
+        aciklama={`Toplam ${musteriler.length} müşteri · en son gelen en üstte`}
+      />
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="kart overflow-hidden">
         {musteriler.length === 0 ? (
-          <p className="text-gray-400 text-sm p-6">Henuz musteri yok.</p>
+          <p className="text-soluk text-sm p-6">Henüz müşteri yok.</p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Musteri</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Numara</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Toplam</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Son Randevu</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {musteriler.map((m) => (
-                <tr key={m.musteri_whatsapp} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-gray-900">{m.musteri_ad}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{m.musteri_whatsapp}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full">
-                      {m.toplam} randevu
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-gray-500 text-xs font-mono">
-                    {tarihSaatMetni(new Date(m.son_randevu))}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="tablo">
+              <thead>
+                <tr>
+                  <th>Müşteri</th>
+                  <th>Numara</th>
+                  <th>Randevu</th>
+                  <th>Son Randevu</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {musteriler.map((m) => (
+                  <tr key={m.musteri_whatsapp}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <span className="w-9 h-9 shrink-0 rounded-full bg-turuncu/12 text-turuncu-acik font-bold flex items-center justify-center">
+                          {m.musteri_ad.trim().charAt(0).toLocaleUpperCase("tr")}
+                        </span>
+                        <span className="font-semibold">{m.musteri_ad}</span>
+                      </div>
+                    </td>
+                    <td className="text-soluk whitespace-nowrap">{m.musteri_whatsapp}</td>
+                    <td>
+                      <span className="rozet rozet-gri">{m.toplam}</span>
+                    </td>
+                    <td className="text-soluk text-xs whitespace-nowrap tabular-nums">
+                      {tarihSaatMetni(new Date(m.son_randevu))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

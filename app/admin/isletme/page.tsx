@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SayfaBasligi from "@/components/SayfaBasligi";
 
 const IKONLAR = ["🏪", "✂️", "💈", "💇", "💅", "🪒", "🧴", "🌟", "⭐", "🔥", "💎", "🎯"];
 
@@ -17,7 +18,7 @@ export default function IsletmePage() {
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
-  const [mesaj, setMesaj] = useState("");
+  const [mesaj, setMesaj] = useState<{ tur: "basari" | "hata"; metin: string } | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/isletme")
@@ -33,7 +34,7 @@ export default function IsletmePage() {
         });
         setYukleniyor(false);
       })
-      .catch(() => { setHata("Veriler yuklenemedi."); setYukleniyor(false); });
+      .catch(() => { setHata("Veriler yüklenemedi."); setYukleniyor(false); });
   }, []);
 
   async function kaydet(e: React.FormEvent) {
@@ -46,88 +47,82 @@ export default function IsletmePage() {
     });
     const json = await r.json().catch(() => ({}));
     setKaydediliyor(false);
-    setMesaj(r.ok ? "Kaydedildi." : (json.hata ?? "Hata olustu."));
-    setTimeout(() => setMesaj(""), 4000);
+    setMesaj(r.ok ? { tur: "basari", metin: "Kaydedildi." } : { tur: "hata", metin: json.hata ?? "Hata oluştu." });
+    setTimeout(() => setMesaj(null), 4000);
   }
 
-  if (yukleniyor) return <p className="text-gray-400 text-sm">Yukleniyor...</p>;
-  if (hata) return <p className="text-red-500 text-sm">{hata}</p>;
+  if (yukleniyor) return <p className="text-soluk text-sm">Yükleniyor...</p>;
+  if (hata) return <p className="uyari-kutusu uyari-hata">{hata}</p>;
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-1">Isletme Bilgileri</h1>
-      <p className="text-gray-400 text-sm mb-6">Salonunuzun genel bilgilerini duzenleyin</p>
+      <SayfaBasligi baslik="İşletme" vurgu="bilgileri" aciklama="Salonunun genel bilgilerini ve WhatsApp numarasını düzenle" />
 
       <form onSubmit={kaydet} className="space-y-5">
-        {/* Ikon secici */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
-            Salon Ikonu
-          </label>
+        <div className="kart p-6">
+          <p className="etiket">Salon İkonu</p>
           <div className="flex flex-wrap gap-2">
             {IKONLAR.map((ikon) => (
               <button
                 key={ikon}
                 type="button"
                 onClick={() => setForm({ ...form, ikon })}
-                className={`w-11 h-11 text-2xl rounded-xl border-2 transition-all flex items-center justify-center ${
+                aria-pressed={form.ikon === ikon}
+                className={`w-12 h-12 text-2xl rounded-2xl border flex items-center justify-center transition-all ${
                   form.ikon === ikon
-                    ? "border-gray-900 bg-gray-50 scale-110"
-                    : "border-gray-200 hover:border-gray-400"
+                    ? "border-turuncu bg-turuncu/10 scale-105"
+                    : "border-cizgi bg-yuzey-2 hover:border-cizgi-guclu"
                 }`}
               >
                 {ikon}
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-3">
-            Secili ikon sol menude goruntulenir
-          </p>
+          <p className="text-xs text-silik mt-3">Seçtiğin ikon menüde görünür.</p>
         </div>
 
-        {/* Bilgiler */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        <div className="kart p-6 space-y-5">
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              Isletme Adi
-            </label>
+            <label className="etiket" htmlFor="ad">Salon Adı</label>
             <input
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              id="ad"
+              className="girdi"
               value={form.ad}
               onChange={(e) => setForm({ ...form, ad: e.target.value })}
               required
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              Telefon
-            </label>
-            <input
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-              value={form.telefon}
-              onChange={(e) => setForm({ ...form, telefon: e.target.value })}
-            />
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label className="etiket" htmlFor="tel">Telefon</label>
+              <input
+                id="tel"
+                className="girdi"
+                value={form.telefon}
+                onChange={(e) => setForm({ ...form, telefon: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="etiket" htmlFor="wa">WhatsApp Bot Numarası</label>
+              <input
+                id="wa"
+                className="girdi"
+                placeholder="+905551234567"
+                value={form.whatsapp_no}
+                onChange={(e) => setForm({ ...form, whatsapp_no: e.target.value })}
+              />
+            </div>
           </div>
+          <p className="text-xs text-silik -mt-2">
+            Müşterilerin mesaj attığı numara. Gelen mesajlar bu numaraya göre salonuna yönlendirilir.
+          </p>
+
           <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              WhatsApp Bot Numarasi
-            </label>
-            <input
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-              placeholder="+905551234567"
-              value={form.whatsapp_no}
-              onChange={(e) => setForm({ ...form, whatsapp_no: e.target.value })}
-            />
-            <p className="text-xs text-gray-400 mt-1.5">
-              Musterilerin mesaj attigi numara. Gelen mesajlar bu numaraya gore isletmenize yonlendirilir.
-            </p>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">
-              Adres
-            </label>
+            <label className="etiket" htmlFor="adres">Adres</label>
             <textarea
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all resize-none"
+              id="adres"
+              className="girdi resize-none"
               rows={2}
               value={form.adres}
               onChange={(e) => setForm({ ...form, adres: e.target.value })}
@@ -135,17 +130,11 @@ export default function IsletmePage() {
           </div>
 
           <div className="flex items-center gap-4 pt-1">
-            <button
-              type="submit"
-              disabled={kaydediliyor}
-              className="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-gray-800 transition-colors"
-            >
+            <button type="submit" disabled={kaydediliyor} className="btn btn-ana">
               {kaydediliyor ? "Kaydediliyor..." : "Kaydet"}
             </button>
             {mesaj && (
-              <span className={`text-sm ${mesaj === "Kaydedildi." ? "text-green-600" : "text-red-500"}`}>
-                {mesaj}
-              </span>
+              <span className={`text-sm ${mesaj.tur === "basari" ? "text-basari" : "text-hata"}`}>{mesaj.metin}</span>
             )}
           </div>
         </div>

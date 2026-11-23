@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SayfaBasligi from "@/components/SayfaBasligi";
+import { ArtiIkon, MakasIkon } from "@/components/ikonlar";
 
 interface Hizmet {
   id: string;
@@ -14,6 +16,7 @@ const BOS: Omit<Hizmet, "id" | "aktif"> = { ad: "", sure_dakika: 30, fiyat: 0 };
 
 export default function HizmetlerPage() {
   const [hizmetler, setHizmetler] = useState<Hizmet[]>([]);
+  const [yuklendi, setYuklendi] = useState(false);
   const [yeni, setYeni] = useState(BOS);
   const [ekleniyor, setEkleniyor] = useState(false);
   const [siliniyor, setSiliniyor] = useState<string | null>(null);
@@ -22,6 +25,7 @@ export default function HizmetlerPage() {
     const r = await fetch("/api/admin/hizmetler");
     const data = await r.json();
     if (Array.isArray(data)) setHizmetler(data);
+    setYuklendi(true);
   }
 
   useEffect(() => { yukle(); }, []);
@@ -49,7 +53,7 @@ export default function HizmetlerPage() {
   }
 
   async function sil(id: string) {
-    if (!confirm("Bu hizmeti silmek istediginize emin misiniz?")) return;
+    if (!confirm("Bu hizmeti silmek istediğine emin misin?")) return;
     setSiliniyor(id);
     await fetch("/api/admin/hizmetler", {
       method: "DELETE",
@@ -62,103 +66,94 @@ export default function HizmetlerPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-1">Hizmetler</h1>
-      <p className="text-gray-400 text-sm mb-6">Salon hizmetlerinizi ve fiyatlarini yonetin</p>
+      <SayfaBasligi baslik="Hizmetler" vurgu="ve fiyatlar" aciklama="Botun müşterilere sunduğu hizmetler" />
 
-      {/* Mevcut hizmetler */}
-      <div className="bg-white rounded-xl border border-gray-200 mb-6 overflow-hidden">
-        {hizmetler.length === 0 ? (
-          <p className="text-gray-400 text-sm p-6">Henuz hizmet eklenmedi.</p>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Hizmet</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Sure</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Fiyat</th>
-                <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Durum</th>
-                <th className="px-5 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {hizmetler.map((h) => (
-                <tr key={h.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-3.5 font-medium text-gray-900">{h.ad}</td>
-                  <td className="px-5 py-3.5 text-gray-500">{h.sure_dakika} dk</td>
-                  <td className="px-5 py-3.5 text-gray-500">{h.fiyat} TL</td>
-                  <td className="px-5 py-3.5">
-                    <button
-                      onClick={() => aktifToggle(h)}
-                      className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
-                        h.aktif
-                          ? "bg-green-50 text-green-700 hover:bg-green-100"
-                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                      }`}
-                    >
-                      {h.aktif ? "Aktif" : "Pasif"}
-                    </button>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <button
-                      onClick={() => sil(h.id)}
-                      disabled={siliniyor === h.id}
-                      className="text-xs text-gray-400 hover:text-red-500 disabled:opacity-40 transition-colors"
-                    >
-                      Sil
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="space-y-2.5 mb-10">
+        {yuklendi && hizmetler.length === 0 && (
+          <div className="kart p-8 text-center">
+            <MakasIkon className="w-8 h-8 text-silik mx-auto mb-3" />
+            <p className="text-soluk text-sm">Henüz hizmet eklenmedi. İlk hizmetini aşağıdan ekle.</p>
+          </div>
         )}
+
+        {hizmetler.map((h) => (
+          <div
+            key={h.id}
+            className={`kart px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-3 ${h.aktif ? "" : "opacity-60"}`}
+          >
+            <div className="flex-1 min-w-[10rem]">
+              <p className="font-semibold">{h.ad}</p>
+              <p className="text-sm text-soluk mt-0.5">{h.sure_dakika} dakika</p>
+            </div>
+            <p className="text-lg font-bold tabular-nums">
+              {h.fiyat} <span className="text-sm text-soluk font-medium">₺</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => aktifToggle(h)}
+                className={`rozet cursor-pointer ${h.aktif ? "rozet-yesil" : "rozet-gri"}`}
+                title="Durumu değiştir"
+              >
+                {h.aktif ? "Aktif" : "Pasif"}
+              </button>
+              <button
+                onClick={() => sil(h.id)}
+                disabled={siliniyor === h.id}
+                className="btn btn-tehlike btn-kucuk"
+              >
+                Sil
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Yeni hizmet */}
-      <h2 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wider">Yeni Hizmet</h2>
-      <form onSubmit={ekle} className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+      <h2 className="text-lg font-bold mb-4">
+        Yeni <span className="text-turuncu">hizmet</span>
+      </h2>
+      <form onSubmit={ekle} className="kart p-6 space-y-5">
         <div>
-          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Hizmet Adi</label>
+          <label className="etiket" htmlFor="ad">Hizmet Adı</label>
           <input
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-            placeholder="Sac Kesimi"
+            id="ad"
+            className="girdi"
+            placeholder="Saç Kesimi"
             value={yeni.ad}
             onChange={(e) => setYeni({ ...yeni, ad: e.target.value })}
             required
           />
         </div>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Sure (dk)</label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="etiket" htmlFor="sure">Süre (dk)</label>
             <input
+              id="sure"
               type="number"
               min={5}
               step={5}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              className="girdi"
               value={yeni.sure_dakika}
               onChange={(e) => setYeni({ ...yeni, sure_dakika: Number(e.target.value) })}
               required
             />
           </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5">Fiyat (TL)</label>
+          <div>
+            <label className="etiket" htmlFor="fiyat">Fiyat (₺)</label>
             <input
+              id="fiyat"
               type="number"
               min={0}
               step={10}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
+              className="girdi"
               value={yeni.fiyat}
               onChange={(e) => setYeni({ ...yeni, fiyat: Number(e.target.value) })}
               required
             />
           </div>
         </div>
-        <button
-          type="submit"
-          disabled={ekleniyor}
-          className="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-gray-800 transition-colors"
-        >
-          {ekleniyor ? "Ekleniyor..." : "Ekle"}
+        <button type="submit" disabled={ekleniyor} className="btn btn-ana">
+          <ArtiIkon className="w-4 h-4" />
+          {ekleniyor ? "Ekleniyor..." : "Hizmet Ekle"}
         </button>
       </form>
     </div>
