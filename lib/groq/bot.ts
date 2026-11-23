@@ -1,6 +1,7 @@
 import Groq from "groq-sdk";
 import { toolCalistir } from "@/lib/anthropic/tool-executor";
-import { bugunIstanbul, isletmeAdi, konusmaGetir, konusmaKaydet } from "@/lib/konusma";
+import { isletmeAdi, konusmaGetir, konusmaKaydet } from "@/lib/konusma";
+import { bugunMetni } from "@/lib/utils/zaman";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MAKS_TUR = 8;
@@ -27,7 +28,7 @@ Kurallar:
 1. Randevu almadan önce mutlaka bos_saat_bak ile o saatin boş olduğunu doğrula.
 2. Müşteriden sadece adını, hizmet türünü ve tarih/saat tercihini iste. Numara sorma.
 3. Hizmet adından ID'yi bilmiyorsan önce hizmetleri_listele ile listele.
-4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Bugünün tarihi: ${bugunIstanbul()}.
+4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Şu an: ${bugunMetni()} (salon saati).
 5. Hiçbir zaman hayali saat veya randevu bilgisi üretme.
 6. İptal işleminde önce randevularim_listele ile müşterinin aktif randevularını getir, onayını al, sonra iptal et.
 7. Boş saat listesini sunarken düz saat formatında ver: "09:00, 09:30, 10:00..." şeklinde.
@@ -60,10 +61,11 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
         properties: {
           musteri_ad: { type: "string", description: "Müşterinin adı soyadı" },
           hizmet_id: { type: "string", description: "Hizmet UUID'si" },
-          baslangic: { type: "string", description: "ISO 8601 başlangıç zamanı" },
+          tarih: { type: "string", description: "Randevu tarihi (YYYY-MM-DD)" },
+          saat: { type: "string", description: "bos_saat_bak'tan dönen saatlerden biri (HH:mm)" },
           notlar: { type: "string", description: "Opsiyonel not" },
         },
-        required: ["musteri_ad", "hizmet_id", "baslangic"],
+        required: ["musteri_ad", "hizmet_id", "tarih", "saat"],
       },
     },
   },

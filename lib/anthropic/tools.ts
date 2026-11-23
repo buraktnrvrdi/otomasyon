@@ -50,16 +50,20 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
           type: "string",
           description: "Seçilen hizmetin UUID'si",
         },
-        baslangic: {
+        tarih: {
           type: "string",
-          description: "Randevu başlangıç zamanı (ISO 8601: YYYY-MM-DDTHH:mm:ssZ)",
+          description: "Randevu tarihi (YYYY-MM-DD)",
+        },
+        saat: {
+          type: "string",
+          description: "Randevu saati, bos_saat_bak'tan dönen saatlerden biri (HH:mm, salon saati)",
         },
         notlar: {
           type: "string",
           description: "Opsiyonel müşteri notu",
         },
       },
-      required: ["musteri_ad", "hizmet_id", "baslangic"],
+      required: ["musteri_ad", "hizmet_id", "tarih", "saat"],
     },
   },
   {

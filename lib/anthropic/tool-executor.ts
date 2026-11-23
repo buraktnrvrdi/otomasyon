@@ -1,10 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { bosSlotlariGetir } from "@/lib/utils/slot-calculator";
-
-function yerelTarih(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
+import { gecerliTarihMi, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 
 /**
  * Müşteri kimliği (musteriNo) her zaman sunucudan gelir; modelin ürettiği
@@ -34,7 +30,7 @@ export async function toolCalistir(
   if (toolName === "bos_saat_bak") {
     const { tarih, hizmet_id } = toolInput as { tarih: string; hizmet_id?: string };
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(tarih))) {
+    if (!gecerliTarihMi(tarih)) {
       return JSON.stringify({ musait: false, hata: "Tarih YYYY-MM-DD olmali." });
     }
 
@@ -51,19 +47,16 @@ export async function toolCalistir(
     return JSON.stringify({
       musait: true,
       tarih,
-      slotlar: bosSlotlar.map((s) => ({
-        baslangic: s.baslangic.toISOString(),
-        baslangicStr: s.baslangicStr,
-        bitis: s.bitis.toISOString(),
-      })),
+      bos_saatler: bosSlotlar.map((s) => s.baslangicStr),
     });
   }
 
   if (toolName === "randevu_olustur") {
-    const { musteri_ad, hizmet_id, baslangic, notlar } = toolInput as {
+    const { musteri_ad, hizmet_id, tarih, saat, notlar } = toolInput as {
       musteri_ad: string;
       hizmet_id: string;
-      baslangic: string;
+      tarih: string;
+      saat: string;
       notlar?: string;
     };
 
@@ -72,22 +65,23 @@ export async function toolCalistir(
       return JSON.stringify({ basari: false, hata: "Hizmet bulunamadı." });
     }
 
-    const baslaD = new Date(baslangic);
-    if (Number.isNaN(baslaD.getTime())) {
-      return JSON.stringify({ basari: false, hata: "Geçersiz başlangıç zamanı." });
+    if (!gecerliTarihMi(tarih) || saatiDakikaya(saat) === null) {
+      return JSON.stringify({ basari: false, hata: "Tarih YYYY-MM-DD, saat HH:mm olmalı." });
     }
 
     // Sadece gerçekten boş olan bir slota randevu yazılır (çalışma saatleri,
     // geçmiş saatler ve diğer randevular dikkate alınır).
-    const slotlar = await bosSlotlariGetir(isletmeId, yerelTarih(baslaD), hizmet.sure_dakika);
-    if (!slotlar.some((s) => s.baslangic.getTime() === baslaD.getTime())) {
+    const slotlar = await bosSlotlariGetir(isletmeId, tarih, hizmet.sure_dakika);
+    const slot = slotlar.find((s) => saatiDakikaya(s.baslangicStr) === saatiDakikaya(saat));
+    if (!slot) {
       return JSON.stringify({
         basari: false,
         hata: "Bu saat müsait değil. Lütfen bos_saat_bak ile boş bir saat seçin.",
       });
     }
 
-    const bitisD = new Date(baslaD.getTime() + hizmet.sure_dakika * 60_000);
+    const baslaD = slot.baslangic;
+    const bitisD = slot.bitis;
 
     const { data: yeniRandevu, error } = await supabase
       .from("randevular")
@@ -112,7 +106,8 @@ export async function toolCalistir(
       basari: true,
       randevu_id: yeniRandevu.id,
       hizmet: hizmet.ad,
-      baslangic: baslaD.toISOString(),
+      tarih: yerelTarih(baslaD),
+      saat: yerelSaat(baslaD),
       fiyat: hizmet.fiyat,
     });
   }
@@ -170,7 +165,17 @@ export async function toolCalistir(
       return JSON.stringify({ basari: false, hata: "Randevular alınamadı." });
     }
 
-    return JSON.stringify({ basari: true, randevular: randevular ?? [] });
+    return JSON.stringify({
+      basari: true,
+      randevular: (randevular ?? []).map((r) => ({
+        id: r.id,
+        durum: r.durum,
+        hizmet: r.hizmetler,
+        tarih: yerelTarih(new Date(r.baslangic)),
+        saat: yerelSaat(new Date(r.baslangic)),
+        bitis_saat: yerelSaat(new Date(r.bitis)),
+      })),
+    });
   }
 
   return JSON.stringify({ hata: `Bilinmeyen araç: ${toolName}` });

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
+import { tarihSaatMetni } from "@/lib/utils/zaman";
 
 interface DavetKodu {
   id: string;
@@ -113,7 +113,7 @@ export default function SuperPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-white/40 text-xs font-mono">
-                      {format(new Date(k.olusturuldu_at), "dd.MM.yyyy HH:mm")}
+                      {tarihSaatMetni(new Date(k.olusturuldu_at))}
                     </td>
                   </tr>
                 ))}

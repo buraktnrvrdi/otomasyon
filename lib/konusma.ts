@@ -45,7 +45,3 @@ export async function isletmeAdi(isletmeId: string): Promise<string> {
   const { data } = await supabase.from("isletme").select("ad").eq("id", isletmeId).maybeSingle();
   return data?.ad ?? "Kuaför";
 }
-
-export function bugunIstanbul(): string {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Istanbul" });
-}

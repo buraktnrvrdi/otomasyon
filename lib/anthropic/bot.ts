@@ -2,7 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { KUAFOR_TOOLS } from "./tools";
 import { toolCalistir } from "./tool-executor";
 import { anthropicClient } from "./client";
-import { bugunIstanbul, isletmeAdi, konusmaGetir, konusmaKaydet } from "@/lib/konusma";
+import { isletmeAdi, konusmaGetir, konusmaKaydet } from "@/lib/konusma";
+import { bugunMetni } from "@/lib/utils/zaman";
 
 const MAKS_TUR = 8;
 
@@ -25,7 +26,7 @@ Kurallar:
 1. Randevu almadan önce mutlaka bos_saat_bak ile o saatin boş olduğunu doğrula.
 2. Müşteriden sadece adını, hizmet türünü ve tarih/saat tercihini iste.
 3. Hizmet adından ID'yi bilmiyorsan önce hizmetleri_listele ile listele.
-4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Bugünün tarihi: ${bugunIstanbul()}.
+4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Şu an: ${bugunMetni()} (salon saati).
 5. Hiçbir zaman hayali saat veya randevu bilgisi üretme — sadece araçlardan gelen verileri kullan.
 6. İptal işleminde önce randevularim_listele ile müşterinin aktif randevularını getir, hangisini iptal etmek istediğini sor, onayını al, sonra iptal et.
 7. Boş saat listesini sunarken emojisiz, düz saat formatında ver: "09:00, 09:30, 10:00..." şeklinde.`;

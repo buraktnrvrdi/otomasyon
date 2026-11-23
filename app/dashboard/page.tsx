@@ -2,37 +2,32 @@ export const instant = false;
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { gunEkle, haftaGunu, uzunTarihMetni, yerelAn, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AutoRefresh from "./AutoRefresh";
 import RandevuEylemleri from "./RandevuEylemleri";
 
+/** biter: dahil olmayan üst sınır */
 function getAralik(filtre: string): { baslar: Date; biter: Date; label: string } {
-  const bugun = new Date();
+  const bugun = yerelTarih();
 
   if (filtre === "yarin") {
-    const yarin = new Date(bugun);
-    yarin.setDate(bugun.getDate() + 1);
-    const baslar = new Date(yarin); baslar.setHours(0, 0, 0, 0);
-    const biter = new Date(yarin); biter.setHours(23, 59, 59, 999);
-    return { baslar, biter, label: "Yarinki Randevular" };
+    const yarin = gunEkle(bugun, 1);
+    return { baslar: yerelAn(yarin), biter: yerelAn(gunEkle(yarin, 1)), label: "Yarinki Randevular" };
   }
 
   if (filtre === "bu-hafta") {
-    const baslar = new Date(bugun); baslar.setHours(0, 0, 0, 0);
-    const biter = new Date(bugun);
-    const gun = bugun.getDay();
+    const gun = haftaGunu(bugun);
     const kalan = gun === 0 ? 0 : 7 - gun;
-    biter.setDate(bugun.getDate() + kalan);
-    biter.setHours(23, 59, 59, 999);
-    return { baslar, biter, label: "Bu Haftaki Randevular" };
+    return {
+      baslar: yerelAn(bugun),
+      biter: yerelAn(gunEkle(bugun, kalan + 1)),
+      label: "Bu Haftaki Randevular",
+    };
   }
 
-  const baslar = new Date(bugun); baslar.setHours(0, 0, 0, 0);
-  const biter = new Date(bugun); biter.setHours(23, 59, 59, 999);
-  return { baslar, biter, label: "Bugunku Randevular" };
+  return { baslar: yerelAn(bugun), biter: yerelAn(gunEkle(bugun, 1)), label: "Bugunku Randevular" };
 }
 
 interface SearchParams {
@@ -59,7 +54,7 @@ export default async function DashboardPage({
     `)
     .eq("isletme_id", isletme_id)
     .gte("baslangic", baslar.toISOString())
-    .lte("baslangic", biter.toISOString())
+    .lt("baslangic", biter.toISOString())
     .neq("durum", "iptal")
     .order("baslangic", { ascending: true });
 
@@ -74,7 +69,7 @@ export default async function DashboardPage({
       <AutoRefresh />
       <h1 className="text-2xl font-bold mb-1">{label}</h1>
       <p className="text-gray-500 mb-4">
-        {format(new Date(), "d MMMM yyyy, EEEE", { locale: tr })}
+        {uzunTarihMetni()}
       </p>
 
       <div className="flex gap-2 mb-6">
@@ -122,7 +117,7 @@ export default async function DashboardPage({
                 </div>
                 <div className="text-right flex flex-col items-end gap-2">
                   <p className="font-mono font-bold text-xl text-gray-900">
-                    {format(new Date(r.baslangic), "HH:mm")}
+                    {yerelSaat(new Date(r.baslangic))}
                   </p>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${

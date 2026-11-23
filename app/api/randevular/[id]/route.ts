@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
+import { gecerliTarihMi, saatiDakikaya, yerelAn } from "@/lib/utils/zaman";
 
 export async function PATCH(
   req: NextRequest,
@@ -13,23 +14,29 @@ export async function PATCH(
   const supabase = await createServerClient();
   const body = await req.json().catch(() => ({}));
 
-  if (body.baslangic) {
-    if (body.hizmet_id) {
-      const { data: hizmet } = await supabase
-        .from("hizmetler")
-        .select("id")
-        .eq("id", body.hizmet_id)
-        .eq("isletme_id", isletme_id)
-        .maybeSingle();
-      if (!hizmet) return NextResponse.json({ error: "Hizmet bulunamadi" }, { status: 404 });
+  if (body.tarih || body.saat) {
+    const dakika = saatiDakikaya(body.saat);
+    if (!gecerliTarihMi(body.tarih) || dakika === null) {
+      return NextResponse.json({ error: "Gecersiz tarih veya saat" }, { status: 400 });
     }
+
+    const { data: hizmet } = await supabase
+      .from("hizmetler")
+      .select("id, sure_dakika")
+      .eq("id", body.hizmet_id)
+      .eq("isletme_id", isletme_id)
+      .maybeSingle();
+    if (!hizmet) return NextResponse.json({ error: "Hizmet bulunamadi" }, { status: 404 });
+
+    const baslangic = yerelAn(body.tarih, dakika);
+    const bitis = new Date(baslangic.getTime() + hizmet.sure_dakika * 60_000);
 
     const { error } = await supabase
       .from("randevular")
       .update({
-        hizmet_id: body.hizmet_id,
-        baslangic: body.baslangic,
-        bitis: body.bitis,
+        hizmet_id: hizmet.id,
+        baslangic: baslangic.toISOString(),
+        bitis: bitis.toISOString(),
       })
       .eq("id", id)
       .eq("isletme_id", isletme_id);

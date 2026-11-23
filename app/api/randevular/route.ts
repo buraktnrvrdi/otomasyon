@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
+import { gecerliTarihMi, saatiDakikaya, yerelAn } from "@/lib/utils/zaman";
 
 export async function POST(req: NextRequest) {
   const isletme_id = await getIsletmeId();
@@ -25,7 +26,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Hizmet bulunamadi" }, { status: 404 });
   }
 
-  const baslangic = new Date(`${tarih}T${saat}:00`);
+  const dakika = saatiDakikaya(saat);
+  if (!gecerliTarihMi(tarih) || dakika === null) {
+    return NextResponse.json({ error: "Gecersiz tarih veya saat" }, { status: 400 });
+  }
+
+  const baslangic = yerelAn(tarih, dakika);
   const bitis = new Date(baslangic.getTime() + hizmet.sure_dakika * 60 * 1000);
 
   const { error } = await supabase.from("randevular").insert({

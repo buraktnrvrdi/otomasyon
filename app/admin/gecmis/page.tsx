@@ -2,7 +2,7 @@ export const instant = false;
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
-import { format } from "date-fns";
+import { tarihSaatMetni, yerelAn, yerelTarih } from "@/lib/utils/zaman";
 import { redirect } from "next/navigation";
 
 type Randevu = {
@@ -31,7 +31,7 @@ function RandevuTablosu({ randevular }: { randevular: Randevu[] }) {
           return (
             <tr key={r.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-5 py-3.5 text-gray-700 font-mono text-xs whitespace-nowrap">
-                {format(new Date(r.baslangic), "dd.MM.yyyy HH:mm")}
+                {tarihSaatMetni(new Date(r.baslangic))}
               </td>
               <td className="px-5 py-3.5">
                 <p className="font-medium text-gray-900">{r.musteri_ad}</p>
@@ -54,8 +54,7 @@ export default async function GecmisPage() {
 
   const supabase = await createServerClient();
 
-  const bugunBaslangic = new Date();
-  bugunBaslangic.setHours(0, 0, 0, 0);
+  const bugunBaslangic = yerelAn(yerelTarih());
 
   const { data: tumRandevular } = await supabase
     .from("randevular")
