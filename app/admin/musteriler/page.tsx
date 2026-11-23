@@ -2,7 +2,7 @@ export const instant = false;
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
-import { format } from "date-fns";
+import { tarihSaatMetni } from "@/lib/utils/zaman";
 import { redirect } from "next/navigation";
 
 interface MusteriSatir {
@@ -78,7 +78,7 @@ export default async function MusterilerPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-gray-500 text-xs font-mono">
-                    {format(new Date(m.son_randevu), "dd.MM.yyyy HH:mm")}
+                    {tarihSaatMetni(new Date(m.son_randevu))}
                   </td>
                 </tr>
               ))}

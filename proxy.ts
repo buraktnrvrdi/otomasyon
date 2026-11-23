@@ -1,15 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { SUPER_COOKIE, oturumGecerliMi } from "@/lib/super-session";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Super admin
   if (pathname.startsWith("/super/login")) return NextResponse.next();
   if (pathname.startsWith("/super")) {
-    const session = req.cookies.get("super_session")?.value;
-    if (session !== process.env.SUPER_ADMIN_PASSWORD) {
+    if (!(await oturumGecerliMi(req.cookies.get(SUPER_COOKIE)?.value))) {
       return NextResponse.redirect(new URL("/super/login", req.url));
     }
     return NextResponse.next();
@@ -44,27 +43,6 @@ export async function middleware(req: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/admin/login", req.url));
-  }
-
-  // isletme_id cookie yoksa service role ile cek ve set et
-  if (!req.cookies.get("isletme_id")?.value) {
-    const db = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-    const { data: isletme } = await db
-      .from("isletme")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    if (isletme?.id) {
-      supabaseResponse.cookies.set("isletme_id", isletme.id, {
-        httpOnly: true,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-        sameSite: "lax",
-      });
-    }
   }
 
   return supabaseResponse;

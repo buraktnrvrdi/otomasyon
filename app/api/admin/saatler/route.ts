@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { getIsletmeIdFromReq } from "@/lib/supabase/auth";
+import { getIsletmeId } from "@/lib/supabase/auth";
 
 export async function GET(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const isletme_id = getIsletmeIdFromReq(req);
+  const isletme_id = await getIsletmeId();
   if (!isletme_id) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   const supabase = await createServerClient();

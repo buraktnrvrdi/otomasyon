@@ -121,7 +121,7 @@ function KayitForm() {
               value={form.sifre}
               onChange={(e) => setForm({ ...form, sifre: e.target.value })}
               placeholder="En az 6 karakter"
-              minLength={6}
+              minLength={8}
               required
             />
           </div>

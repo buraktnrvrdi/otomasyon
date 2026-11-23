@@ -1,61 +1,94 @@
-export async function mesajGonder(to: string, metin: string): Promise<void> {
-  const provider = process.env.WHATSAPP_PROVIDER ?? "twilio";
+interface Gonderen {
+  /** Twilio: işletmenin numarası */
+  numara?: string;
+  /** Meta: işletmenin phone_number_id değeri */
+  phoneNumberId?: string;
+}
 
-  if (provider === "meta") {
-    await metaGonder(to, metin);
+const saglayici = () => process.env.WHATSAPP_PROVIDER ?? "twilio";
+
+/** Serbest metin: sadece müşterinin son 24 saatte yazdığı sohbetlerde gönderilebilir. */
+export async function mesajGonder(
+  to: string,
+  metin: string,
+  gonderen: Gonderen = {}
+): Promise<void> {
+  if (saglayici() === "meta") {
+    await metaPost(gonderen.phoneNumberId, {
+      to: to.replace("+", ""),
+      type: "text",
+      text: { body: metin },
+    });
   } else {
-    await twilioGonder(to, metin);
+    await twilioPost(gonderen.numara, to, { Body: metin });
   }
 }
 
-async function twilioGonder(to: string, metin: string): Promise<void> {
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${process.env.TWILIO_ACCOUNT_SID}/Messages.json`;
+/**
+ * Onaylı şablon mesajı: 24 saat kuralına takılmadan müşteriye ilk mesajı
+ * (ör. hatırlatma) göndermenin tek yolu. sablon: Meta'da şablon adı,
+ * Twilio'da Content SID (HX...). degiskenler şablondaki {{1}}, {{2}}... sırasıyla.
+ */
+export async function sablonGonder(
+  to: string,
+  sablon: string,
+  degiskenler: string[],
+  gonderen: Gonderen = {}
+): Promise<void> {
+  if (saglayici() === "meta") {
+    await metaPost(gonderen.phoneNumberId, {
+      to: to.replace("+", ""),
+      type: "template",
+      template: {
+        name: sablon,
+        language: { code: process.env.WHATSAPP_SABLON_DIL || "tr" },
+        components: [
+          {
+            type: "body",
+            parameters: degiskenler.map((text) => ({ type: "text", text })),
+          },
+        ],
+      },
+    });
+  } else {
+    await twilioPost(gonderen.numara, to, {
+      ContentSid: sablon,
+      ContentVariables: JSON.stringify(
+        Object.fromEntries(degiskenler.map((d, i) => [String(i + 1), d]))
+      ),
+    });
+  }
+}
 
-  const body = new URLSearchParams({
-    From: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-    To: `whatsapp:${to}`,
-    Body: metin,
-  });
-
-  const res = await fetch(url, {
+async function twilioPost(numara: string | undefined, to: string, alanlar: Record<string, string>) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: "POST",
     headers: {
       Authorization:
-        "Basic " +
-        Buffer.from(
-          `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-        ).toString("base64"),
+        "Basic " + Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64"),
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body,
+    body: new URLSearchParams({
+      From: `whatsapp:${numara ?? process.env.TWILIO_WHATSAPP_FROM}`,
+      To: `whatsapp:${to}`,
+      ...alanlar,
+    }),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Twilio gönderim hatası: ${err}`);
-  }
+  if (!res.ok) throw new Error(`Twilio gönderim hatası: ${await res.text()}`);
 }
 
-async function metaGonder(to: string, metin: string): Promise<void> {
-  const phoneId = process.env.META_PHONE_NUMBER_ID;
-  const url = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
-
-  const res = await fetch(url, {
+async function metaPost(phoneNumberId: string | undefined, govde: Record<string, unknown>) {
+  const phoneId = phoneNumberId ?? process.env.META_PHONE_NUMBER_ID;
+  const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.META_ACCESS_TOKEN}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to: to.replace("+", ""),
-      type: "text",
-      text: { body: metin },
-    }),
+    body: JSON.stringify({ messaging_product: "whatsapp", ...govde }),
   });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Meta API gönderim hatası: ${err}`);
-  }
+  if (!res.ok) throw new Error(`Meta API gönderim hatası: ${await res.text()}`);
 }

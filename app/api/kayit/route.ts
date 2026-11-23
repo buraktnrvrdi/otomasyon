@@ -11,16 +11,25 @@ export async function POST(req: NextRequest) {
 
   const db = await createServerClient();
 
-  // Davet kodu kontrolu
+  if (typeof sifre !== "string" || sifre.length < 8) {
+    return NextResponse.json({ hata: "Sifre en az 8 karakter olmali." }, { status: 400 });
+  }
+
+  // Kodu tek sorguda "kullanildi" yap: ayni anda gelen iki kayit ayni kodu alamaz.
   const { data: kod } = await db
     .from("davet_kodlari")
-    .select("id, kullanildi")
-    .eq("kod", davet_kodu.toUpperCase())
-    .single();
+    .update({ kullanildi: true })
+    .eq("kod", String(davet_kodu).trim().toUpperCase())
+    .eq("kullanildi", false)
+    .select("id")
+    .maybeSingle();
 
-  if (!kod || kod.kullanildi) {
+  if (!kod) {
     return NextResponse.json({ hata: "Gecersiz veya kullanilmis davet kodu." }, { status: 400 });
   }
+
+  const koduGeriAc = () =>
+    db.from("davet_kodlari").update({ kullanildi: false }).eq("id", kod.id);
 
   // Supabase auth kullanici olustur (email dogrulama atla)
   const { data: authData, error: authError } = await db.auth.admin.createUser({
@@ -30,6 +39,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (authError || !authData.user) {
+    await koduGeriAc();
     const mesaj = authError?.message?.includes("already registered")
       ? "Bu email adresi zaten kayitli."
       : (authError?.message ?? "Hesap olusturulamadi.");
@@ -47,6 +57,7 @@ export async function POST(req: NextRequest) {
 
   if (isletmeError || !isletme) {
     await db.auth.admin.deleteUser(userId);
+    await koduGeriAc();
     return NextResponse.json({ hata: "Isletme kaydedilemedi." }, { status: 500 });
   }
 
@@ -59,9 +70,6 @@ export async function POST(req: NextRequest) {
     kapali: i === 0,
   }));
   await db.from("calisma_saatleri").insert(saatler);
-
-  // Davet kodunu kullanildi yap
-  await db.from("davet_kodlari").update({ kullanildi: true }).eq("id", kod.id);
 
   // Otomatik giris yap
   const cookiesToSet: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
@@ -82,8 +90,5 @@ export async function POST(req: NextRequest) {
   cookiesToSet.forEach(({ name, value, options }) =>
     response.cookies.set(name, value, options as Parameters<typeof response.cookies.set>[2])
   );
-  response.cookies.set("isletme_id", isletme.id, {
-    httpOnly: true, path: "/", maxAge: 60 * 60 * 24 * 7, sameSite: "lax",
-  });
   return response;
 }

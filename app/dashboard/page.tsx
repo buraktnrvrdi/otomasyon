@@ -2,37 +2,41 @@ export const instant = false;
 
 import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
+import { gunEkle, haftaGunu, uzunTarihMetni, yerelAn, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 import Link from "next/link";
+import { gecmisleriTamamla } from "@/lib/randevu-durum";
 import { redirect } from "next/navigation";
 import AutoRefresh from "./AutoRefresh";
 import RandevuEylemleri from "./RandevuEylemleri";
+import GelmediButonu from "./GelmediButonu";
 
+const DURUM_ROZET: Record<string, { etiket: string; renk: string }> = {
+  onaylandi: { etiket: "Onaylandi", renk: "bg-green-100 text-green-700" },
+  beklemede: { etiket: "Beklemede", renk: "bg-yellow-100 text-yellow-700" },
+  tamamlandi: { etiket: "Tamamlandi", renk: "bg-gray-100 text-gray-500" },
+  gelmedi: { etiket: "Gelmedi", renk: "bg-orange-100 text-orange-700" },
+};
+
+/** biter: dahil olmayan üst sınır */
 function getAralik(filtre: string): { baslar: Date; biter: Date; label: string } {
-  const bugun = new Date();
+  const bugun = yerelTarih();
 
   if (filtre === "yarin") {
-    const yarin = new Date(bugun);
-    yarin.setDate(bugun.getDate() + 1);
-    const baslar = new Date(yarin); baslar.setHours(0, 0, 0, 0);
-    const biter = new Date(yarin); biter.setHours(23, 59, 59, 999);
-    return { baslar, biter, label: "Yarinki Randevular" };
+    const yarin = gunEkle(bugun, 1);
+    return { baslar: yerelAn(yarin), biter: yerelAn(gunEkle(yarin, 1)), label: "Yarinki Randevular" };
   }
 
   if (filtre === "bu-hafta") {
-    const baslar = new Date(bugun); baslar.setHours(0, 0, 0, 0);
-    const biter = new Date(bugun);
-    const gun = bugun.getDay();
+    const gun = haftaGunu(bugun);
     const kalan = gun === 0 ? 0 : 7 - gun;
-    biter.setDate(bugun.getDate() + kalan);
-    biter.setHours(23, 59, 59, 999);
-    return { baslar, biter, label: "Bu Haftaki Randevular" };
+    return {
+      baslar: yerelAn(bugun),
+      biter: yerelAn(gunEkle(bugun, kalan + 1)),
+      label: "Bu Haftaki Randevular",
+    };
   }
 
-  const baslar = new Date(bugun); baslar.setHours(0, 0, 0, 0);
-  const biter = new Date(bugun); biter.setHours(23, 59, 59, 999);
-  return { baslar, biter, label: "Bugunku Randevular" };
+  return { baslar: yerelAn(bugun), biter: yerelAn(gunEkle(bugun, 1)), label: "Bugunku Randevular" };
 }
 
 interface SearchParams {
@@ -48,6 +52,7 @@ export default async function DashboardPage({
   if (!isletme_id) redirect("/admin/login");
 
   const { filtre = "bugun" } = await searchParams;
+  await gecmisleriTamamla(isletme_id);
   const supabase = await createServerClient();
   const { baslar, biter, label } = getAralik(filtre);
 
@@ -59,7 +64,7 @@ export default async function DashboardPage({
     `)
     .eq("isletme_id", isletme_id)
     .gte("baslangic", baslar.toISOString())
-    .lte("baslangic", biter.toISOString())
+    .lt("baslangic", biter.toISOString())
     .neq("durum", "iptal")
     .order("baslangic", { ascending: true });
 
@@ -74,7 +79,7 @@ export default async function DashboardPage({
       <AutoRefresh />
       <h1 className="text-2xl font-bold mb-1">{label}</h1>
       <p className="text-gray-500 mb-4">
-        {format(new Date(), "d MMMM yyyy, EEEE", { locale: tr })}
+        {uzunTarihMetni()}
       </p>
 
       <div className="flex gap-2 mb-6">
@@ -122,22 +127,24 @@ export default async function DashboardPage({
                 </div>
                 <div className="text-right flex flex-col items-end gap-2">
                   <p className="font-mono font-bold text-xl text-gray-900">
-                    {format(new Date(r.baslangic), "HH:mm")}
+                    {yerelSaat(new Date(r.baslangic))}
                   </p>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      r.durum === "onaylandi"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
+                      DURUM_ROZET[r.durum]?.renk ?? "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {r.durum}
+                    {DURUM_ROZET[r.durum]?.etiket ?? r.durum}
                   </span>
-                  <RandevuEylemleri
-                    id={r.id}
-                    hizmetId={r.hizmet_id ?? null}
-                    baslangic={r.baslangic}
-                  />
+                  {r.durum === "tamamlandi" || r.durum === "gelmedi" ? (
+                    <GelmediButonu id={r.id} durum={r.durum} />
+                  ) : (
+                    <RandevuEylemleri
+                      id={r.id}
+                      hizmetId={r.hizmet_id ?? null}
+                      baslangic={r.baslangic}
+                    />
+                  )}
                 </div>
               </li>
             );

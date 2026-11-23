@@ -1,27 +1,17 @@
-import { createServerClient as _createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 
+/**
+ * Sunucu tarafı veritabanı istemcisi (service role). Bilerek cookie okumaz:
+ * cookie'de bir kullanıcı oturumu bulursa supabase-js service role anahtarı
+ * yerine o kullanıcının token'ını kullanır ve RLS'e takılır. Kullanıcı
+ * kimliği için lib/supabase/auth.ts kullanılır.
+ */
 export async function createServerClient() {
-  const cookieStore = await cookies();
-
-  return _createServerClient(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Server component — write-only cookie ops ignored
-          }
-        },
-      },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     }
   );
 }

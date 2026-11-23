@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 
 interface Hizmet {
   id: string;
@@ -21,8 +22,8 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
   const [modalAcik, setModalAcik] = useState(false);
   const [hizmetler, setHizmetler] = useState<Hizmet[]>([]);
   const [seciliHizmetId, setSeciliHizmetId] = useState(hizmetId ?? "");
-  const [tarih, setTarih] = useState(baslangic.slice(0, 10));
-  const [saat, setSaat] = useState(baslangic.slice(11, 16));
+  const [tarih, setTarih] = useState(() => yerelTarih(new Date(baslangic)));
+  const [saat, setSaat] = useState(() => yerelSaat(new Date(baslangic)));
   const [hata, setHata] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -47,27 +48,20 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
       setHizmetler(data);
     }
     setSeciliHizmetId(hizmetId ?? "");
-    setTarih(baslangic.slice(0, 10));
-    setSaat(baslangic.slice(11, 16));
+    setTarih(yerelTarih(new Date(baslangic)));
+    setSaat(yerelSaat(new Date(baslangic)));
     setHata("");
     setModalAcik(true);
   }
 
   async function kaydet() {
-    const hizmet = hizmetler.find((h) => h.id === seciliHizmetId);
-    if (!hizmet) { setHata("Hizmet secin."); return; }
-    const bas = new Date(`${tarih}T${saat}:00`);
-    const bit = new Date(bas.getTime() + hizmet.sure_dakika * 60000);
+    if (!hizmetler.some((h) => h.id === seciliHizmetId)) { setHata("Hizmet secin."); return; }
     setYukleniyor(true);
     setHata("");
     const res = await fetch(`/api/randevular/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        hizmet_id: seciliHizmetId,
-        baslangic: bas.toISOString(),
-        bitis: bit.toISOString(),
-      }),
+      body: JSON.stringify({ hizmet_id: seciliHizmetId, tarih, saat }),
     });
     setYukleniyor(false);
     if (!res.ok) {
