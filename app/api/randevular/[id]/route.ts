@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { gecerliTarihMi, saatiDakikaya, yerelAn } from "@/lib/utils/zaman";
-import { AKTIF_DURUMLAR, SONUC_DURUMLARI } from "@/lib/randevu-durum";
+import { AKTIF_DURUMLAR, SONUC_DURUMLARI, cakismaHatasiMi } from "@/lib/randevu-durum";
 
 export async function PATCH(
   req: NextRequest,
@@ -66,6 +66,9 @@ export async function PATCH(
       .in("durum", AKTIF_DURUMLAR)
       .select("id");
 
+    if (cakismaHatasiMi(error)) {
+      return NextResponse.json({ error: "Bu saatte baska bir randevu var." }, { status: 409 });
+    }
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!data?.length) return NextResponse.json({ error: "Aktif randevu bulunamadi" }, { status: 404 });
     return NextResponse.json({ ok: true });

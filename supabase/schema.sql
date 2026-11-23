@@ -8,6 +8,7 @@ CREATE TABLE isletme (
   adres       TEXT,
   whatsapp_no TEXT UNIQUE,
   ikon        TEXT DEFAULT '🏪',
+  meta_phone_number_id TEXT,
   user_id     UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -53,8 +54,15 @@ CREATE TABLE randevular (
                    CONSTRAINT randevular_durum_check
                    CHECK (durum IN ('beklemede','onaylandi','iptal','tamamlandi','gelmedi')),
   notlar           TEXT,
+  hatirlatma_gonderildi_at TIMESTAMPTZ,
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Aynı işletmede zamanı çakışan iki aktif randevu olamaz
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+ALTER TABLE randevular ADD CONSTRAINT randevular_cakisma_yok
+  EXCLUDE USING gist (isletme_id WITH =, tstzrange(baslangic, bitis, '[)') WITH &&)
+  WHERE (durum IN ('beklemede', 'onaylandi'));
 
 CREATE INDEX idx_randevular_baslangic ON randevular(isletme_id, baslangic);
 CREATE INDEX idx_randevular_whatsapp  ON randevular(musteri_whatsapp);
@@ -82,6 +90,17 @@ CREATE TABLE konusmalar (
 );
 
 -- =============================================
+-- TABLO 7: giris_denemeleri (super admin kaba kuvvet sınırı)
+-- =============================================
+CREATE TABLE giris_denemeleri (
+  id      BIGSERIAL PRIMARY KEY,
+  anahtar TEXT NOT NULL,
+  zaman   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_giris_denemeleri ON giris_denemeleri(anahtar, zaman);
+
+-- =============================================
 -- ROW LEVEL SECURITY
 -- =============================================
 ALTER TABLE isletme          ENABLE ROW LEVEL SECURITY;
@@ -90,6 +109,7 @@ ALTER TABLE calisma_saatleri ENABLE ROW LEVEL SECURITY;
 ALTER TABLE randevular       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE davet_kodlari    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE konusmalar       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE giris_denemeleri ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_all" ON isletme
   FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -107,4 +127,7 @@ CREATE POLICY "service_role_all" ON davet_kodlari
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE POLICY "service_role_all" ON konusmalar
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON giris_denemeleri
   FOR ALL TO service_role USING (true) WITH CHECK (true);

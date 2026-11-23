@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { groqBotYaniti } from "@/lib/groq/bot";
+import { botYaniti } from "@/lib/bot";
 import { createServerClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       typeof oturum === "string" && oturum.startsWith("web-") && UUID.test(oturum.slice(4));
     const oturumId = gecerliOturum ? oturum : `web-${crypto.randomUUID()}`;
 
-    const yanit = await groqBotYaniti(oturumId, mesaj.trim(), isletme_id);
+    const yanit = await botYaniti(oturumId, mesaj.trim(), isletme_id);
 
     return NextResponse.json({ yanit, oturum: oturumId });
   } catch (err) {

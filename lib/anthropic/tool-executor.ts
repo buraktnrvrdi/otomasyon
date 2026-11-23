@@ -1,7 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { bosSlotlariGetir } from "@/lib/utils/slot-calculator";
 import { gecerliTarihMi, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
-import { AKTIF_DURUMLAR } from "@/lib/randevu-durum";
+import { AKTIF_DURUMLAR, cakismaHatasiMi } from "@/lib/randevu-durum";
 
 /**
  * Müşteri kimliği (musteriNo) her zaman sunucudan gelir; modelin ürettiği
@@ -99,6 +99,12 @@ export async function toolCalistir(
       .select()
       .single();
 
+    if (cakismaHatasiMi(error)) {
+      return JSON.stringify({
+        basari: false,
+        hata: "Bu saat az önce başkası tarafından alındı. Lütfen başka bir saat seçin.",
+      });
+    }
     if (error) {
       return JSON.stringify({ basari: false, hata: "Randevu kaydedilemedi." });
     }

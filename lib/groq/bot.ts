@@ -1,39 +1,14 @@
 import Groq from "groq-sdk";
 import { toolCalistir } from "@/lib/anthropic/tool-executor";
 import { isletmeAdi, konusmaGetir, konusmaKaydet } from "@/lib/konusma";
-import { bugunMetni } from "@/lib/utils/zaman";
+import { sistemPrompt } from "@/lib/bot/prompt";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MAKS_TUR = 8;
+const SAGLAYICI = "groq";
 
 type Mesaj = Groq.Chat.ChatCompletionMessageParam;
 const kullaniciMesajiMi = (m: Mesaj) => m.role === "user";
-
-function sistemPrompt(isletme: string) {
-  return `\
-Sen "${isletme}" adlı kuaför salonunun WhatsApp randevu asistanısın.
-Türkçe konuş, samimi ve kısa mesajlar gönder.
-
-Müşterinin numarası sistem tarafından otomatik eklenir; müşteriden numara ASLA isteme.
-Sadece bu müşterinin kendi randevularını görebilir ve iptal edebilirsin.
-
-Yapabileceklerin:
-- Hizmet listesini gösterme (hizmetleri_listele aracı)
-- Müsait saatleri gösterme (bos_saat_bak aracı)
-- Randevu alma (randevu_olustur aracı)
-- Randevu iptali (randevu_iptal aracı)
-- Mevcut randevuları listeleme (randevularim_listele aracı)
-
-Kurallar:
-1. Randevu almadan önce mutlaka bos_saat_bak ile o saatin boş olduğunu doğrula.
-2. Müşteriden sadece adını, hizmet türünü ve tarih/saat tercihini iste. Numara sorma.
-3. Hizmet adından ID'yi bilmiyorsan önce hizmetleri_listele ile listele.
-4. Belirsiz tarihleri ("yarın", "cuma") ISO formatına (YYYY-MM-DD) çevir. Şu an: ${bugunMetni()} (salon saati).
-5. Hiçbir zaman hayali saat veya randevu bilgisi üretme.
-6. İptal işleminde önce randevularim_listele ile müşterinin aktif randevularını getir, onayını al, sonra iptal et.
-7. Boş saat listesini sunarken düz saat formatında ver: "09:00, 09:30, 10:00..." şeklinde.
-8. Seçilen saat doluysa özür dile ve aynı gün için bos_saat_bak ile alternatif saatler sun.`;
-}
 
 const TOOLS: Groq.Chat.ChatCompletionTool[] = [
   {
@@ -104,7 +79,7 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
 
 export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, isletmeId: string): Promise<string> {
   const [mesajlar, isletme] = await Promise.all([
-    konusmaGetir<Mesaj>(isletmeId, musteriNo),
+    konusmaGetir<Mesaj>(isletmeId, musteriNo, SAGLAYICI),
     isletmeAdi(isletmeId),
   ]);
 
@@ -112,7 +87,7 @@ export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, islet
 
   for (let tur = 0; tur < MAKS_TUR; tur++) {
     const yanit = await groq.chat.completions.create({
-      model: "qwen/qwen3.8-27b",
+      model: process.env.GROQ_MODEL || "qwen/qwen3.8-27b",
       max_tokens: 1024,
       messages: [{ role: "system", content: sistemPrompt(isletme) }, ...mesajlar],
       tools: TOOLS,
@@ -136,11 +111,13 @@ export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, islet
     }
   }
 
-  await konusmaKaydet(isletmeId, musteriNo, mesajlar, kullaniciMesajiMi);
+  await konusmaKaydet(isletmeId, musteriNo, SAGLAYICI, mesajlar, kullaniciMesajiMi);
 
   const sonMesaj = mesajlar.at(-1);
   if (sonMesaj?.role === "assistant" && typeof sonMesaj.content === "string") {
-    return sonMesaj.content;
+    // Bazı modeller düşünme metnini <think> bloğunda döndürür; müşteriye gitmemeli.
+    const metin = sonMesaj.content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+    if (metin) return metin;
   }
 
   return "Üzgünüm, bir hata oluştu. Lütfen tekrar deneyin.";

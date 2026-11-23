@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { botYaniti } from "@/lib/anthropic/bot";
+import { botYaniti } from "@/lib/bot";
 import { mesajGonder } from "@/lib/whatsapp/sender";
 import { parseTwilioPayload, parseMetaPayload } from "@/lib/whatsapp/parser";
 import type { WhatsAppMessage } from "@/lib/whatsapp/types";
 import { metaImzaGecerli, twilioImzaGecerli } from "@/lib/whatsapp/signature";
 import { createServerClient } from "@/lib/supabase/server";
 
-async function isletmeBul(isletmeNo: string): Promise<string | null> {
+async function isletmeBul(isletmeNo: string, phoneNumberId?: string): Promise<string | null> {
   if (isletmeNo) {
     const supabase = await createServerClient();
     const { data } = await supabase
       .from("isletme")
-      .select("id")
+      .select("id, meta_phone_number_id")
       .eq("whatsapp_no", isletmeNo)
       .maybeSingle();
-    if (data?.id) return data.id;
+    if (data?.id) {
+      // Hatırlatmalar bu numaradan gönderilebilsin diye Meta kimliğini sakla.
+      if (phoneNumberId && data.meta_phone_number_id !== phoneNumberId) {
+        await supabase.from("isletme").update({ meta_phone_number_id: phoneNumberId }).eq("id", data.id);
+      }
+      return data.id;
+    }
   }
   return process.env.DEFAULT_ISLETME_ID || null;
 }
@@ -63,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     if (!payload?.text) return NextResponse.json({ ok: true });
 
-    const isletmeId = await isletmeBul(payload.to);
+    const isletmeId = await isletmeBul(payload.to, payload.phoneNumberId);
     if (!isletmeId) {
       console.error("[Webhook] Numaraya bagli isletme yok:", payload.to);
       return NextResponse.json({ ok: true });

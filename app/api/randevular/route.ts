@@ -2,6 +2,8 @@ import { createServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { gecerliTarihMi, saatiDakikaya, yerelAn } from "@/lib/utils/zaman";
+import { cakismaHatasiMi } from "@/lib/randevu-durum";
+import { numaraNormalize } from "@/lib/whatsapp/parser";
 
 export async function POST(req: NextRequest) {
   const isletme_id = await getIsletmeId();
@@ -37,13 +39,16 @@ export async function POST(req: NextRequest) {
   const { error } = await supabase.from("randevular").insert({
     isletme_id,
     musteri_ad,
-    musteri_whatsapp,
+    musteri_whatsapp: numaraNormalize(musteri_whatsapp),
     hizmet_id,
     baslangic: baslangic.toISOString(),
     bitis: bitis.toISOString(),
     durum: "onaylandi",
   });
 
+  if (cakismaHatasiMi(error)) {
+    return NextResponse.json({ error: "Bu saatte baska bir randevu var." }, { status: 409 });
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

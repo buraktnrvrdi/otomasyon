@@ -1,7 +1,10 @@
 import type { WhatsAppMessage } from "./types";
 
+/** "+905551234567" biçimine getirir; yurt içi yazımlar (0555..., 555...) Türkiye kabul edilir. */
 export function numaraNormalize(no: string): string {
-  const rakamlar = no.replace(/\D/g, "");
+  let rakamlar = String(no).replace(/\D/g, "");
+  if (rakamlar.length === 11 && rakamlar.startsWith("0")) rakamlar = "90" + rakamlar.slice(1);
+  else if (rakamlar.length === 10 && rakamlar.startsWith("5")) rakamlar = "90" + rakamlar;
   return rakamlar ? "+" + rakamlar : "";
 }
 

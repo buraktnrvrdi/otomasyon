@@ -1,4 +1,4 @@
-// Web Crypto kullanılır; hem Node hem Edge çalışma ortamında (middleware) çalışır.
+// Web Crypto kullanılır; Node ve Edge çalışma ortamlarında (proxy dahil) çalışır.
 
 export const SUPER_COOKIE = "super_session";
 export const SUPER_OTURUM_SN = 60 * 60 * 12;
