@@ -5,12 +5,12 @@ import SayfaBasligi from "@/components/SayfaBasligi";
 import SohbetPenceresi from "@/components/SohbetPenceresi";
 
 export default function ChatPage() {
-  const [isletme, setIsletme] = useState<{ id: string; ad: string; ikon?: string } | null>(null);
+  const [isletme, setIsletme] = useState<{ id: string; ad: string; ikon?: string | null; logoUrl?: string | null } | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/isletme")
       .then((r) => r.json())
-      .then((d) => { if (d.id) setIsletme({ id: d.id, ad: d.ad, ikon: d.ikon }); })
+      .then((d) => { if (d.id) setIsletme({ id: d.id, ad: d.ad, ikon: d.ikon, logoUrl: d.logo_url }); })
       .catch(() => {});
   }, []);
 
@@ -25,6 +25,7 @@ export default function ChatPage() {
         isletmeId={isletme?.id ?? null}
         isletmeAdi={isletme?.ad ?? "Randevu Asistanı"}
         ikon={isletme?.ikon}
+        logoUrl={isletme?.logoUrl}
         altBaslik="Test modu · çevrimiçi"
         hazirDegilMesaji="Test için önce panele giriş yapmalısın."
         className="h-[calc(100dvh-16rem)] min-h-[28rem] max-w-2xl"

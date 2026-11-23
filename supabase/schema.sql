@@ -7,7 +7,8 @@ CREATE TABLE isletme (
   telefon     TEXT,
   adres       TEXT,
   whatsapp_no TEXT UNIQUE,
-  ikon        TEXT DEFAULT '🏪',
+  ikon        TEXT DEFAULT 'makas',
+  logo_url    TEXT,
   meta_phone_number_id TEXT,
   user_id     UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
@@ -131,3 +132,10 @@ CREATE POLICY "service_role_all" ON konusmalar
 
 CREATE POLICY "service_role_all" ON giris_denemeleri
   FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- =============================================
+-- STORAGE: salon logoları (herkese açık okuma, yükleme sadece sunucudan)
+-- =============================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('logolar', 'logolar', true, 2097152, ARRAY['image/png', 'image/jpeg', 'image/webp'])
+ON CONFLICT (id) DO NOTHING;

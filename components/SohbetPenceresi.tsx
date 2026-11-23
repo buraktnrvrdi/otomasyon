@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GonderIkon } from "./ikonlar";
+import IsletmeLogosu from "./IsletmeLogosu";
 
 interface Mesaj {
   rol: "kullanici" | "bot";
@@ -13,7 +14,8 @@ const ONERILER = ["Hizmetleriniz neler?", "Yarın boş saat var mı?", "Randevul
 interface Props {
   isletmeId: string | null;
   isletmeAdi: string;
-  ikon?: string;
+  ikon?: string | null;
+  logoUrl?: string | null;
   altBaslik: string;
   /** isletmeId yokken mesaj gönderilmek istenirse gösterilecek uyarı */
   hazirDegilMesaji?: string;
@@ -24,6 +26,7 @@ export default function SohbetPenceresi({
   isletmeId,
   isletmeAdi,
   ikon,
+  logoUrl,
   altBaslik,
   hazirDegilMesaji = "Sohbet şu an kullanılamıyor.",
   className = "",
@@ -76,9 +79,9 @@ export default function SohbetPenceresi({
   return (
     <div className={`kart flex flex-col overflow-hidden ${className}`}>
       <div className="flex items-center gap-3 px-5 py-4 border-b border-cizgi bg-yuzey-2/60">
-        <div className="relative w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-turuncu-acik to-turuncu-koyu flex items-center justify-center text-xl font-bold text-white">
-          {ikon ?? isletmeAdi.charAt(0).toLocaleUpperCase("tr")}
-          <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-basari ring-2 ring-yuzey" />
+        <div className="relative shrink-0">
+          <IsletmeLogosu ad={isletmeAdi} ikon={ikon} logoUrl={logoUrl} boyut="md" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-basari ring-2 ring-yuzey" />
         </div>
         <div className="min-w-0">
           <p className="font-semibold truncate">{isletmeAdi}</p>

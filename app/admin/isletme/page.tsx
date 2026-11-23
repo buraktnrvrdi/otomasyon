@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import SayfaBasligi from "@/components/SayfaBasligi";
-
-const IKONLAR = ["🏪", "✂️", "💈", "💇", "💅", "🪒", "🧴", "🌟", "⭐", "🔥", "💎", "🎯"];
+import IkonSecici from "@/components/IkonSecici";
+import LogoYukle from "@/components/LogoYukle";
+import { ikonAnahtari } from "@/lib/isletme-ikon";
 
 interface Isletme {
   ad: string;
@@ -11,10 +12,11 @@ interface Isletme {
   adres: string;
   ikon: string;
   whatsapp_no: string;
+  logo_url: string | null;
 }
 
 export default function IsletmePage() {
-  const [form, setForm] = useState<Isletme>({ ad: "", telefon: "", adres: "", ikon: "🏪", whatsapp_no: "" });
+  const [form, setForm] = useState<Isletme>({ ad: "", telefon: "", adres: "", ikon: "makas", whatsapp_no: "", logo_url: null });
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
@@ -29,8 +31,9 @@ export default function IsletmePage() {
           ad: d.ad ?? "",
           telefon: d.telefon ?? "",
           adres: d.adres ?? "",
-          ikon: d.ikon ?? "🏪",
+          ikon: ikonAnahtari(d.ikon),
           whatsapp_no: d.whatsapp_no ?? "",
+          logo_url: d.logo_url ?? null,
         });
         setYukleniyor(false);
       })
@@ -59,26 +62,27 @@ export default function IsletmePage() {
       <SayfaBasligi baslik="İşletme" vurgu="bilgileri" aciklama="Salonunun genel bilgilerini ve WhatsApp numarasını düzenle" />
 
       <form onSubmit={kaydet} className="space-y-5">
-        <div className="kart p-6">
-          <p className="etiket">Salon İkonu</p>
-          <div className="flex flex-wrap gap-2">
-            {IKONLAR.map((ikon) => (
-              <button
-                key={ikon}
-                type="button"
-                onClick={() => setForm({ ...form, ikon })}
-                aria-pressed={form.ikon === ikon}
-                className={`w-12 h-12 text-2xl rounded-2xl border flex items-center justify-center transition-all ${
-                  form.ikon === ikon
-                    ? "border-turuncu bg-turuncu/10 scale-105"
-                    : "border-cizgi bg-yuzey-2 hover:border-cizgi-guclu"
-                }`}
-              >
-                {ikon}
-              </button>
-            ))}
+        <div className="kart p-6 space-y-6">
+          <div>
+            <p className="etiket">Salon Logosu</p>
+            <LogoYukle
+              ad={form.ad || "Salon"}
+              ikon={form.ikon}
+              logoUrl={form.logo_url}
+              onDegisti={(url) => setForm((f) => ({ ...f, logo_url: url }))}
+            />
+            <p className="text-xs text-silik mt-3">
+              Logo hemen kaydedilir ve menüde ile müşteri sohbetinde görünür.
+            </p>
           </div>
-          <p className="text-xs text-silik mt-3">Seçtiğin ikon menüde görünür.</p>
+
+          <div className="border-t border-cizgi pt-6">
+            <p className="etiket">Simge</p>
+            <p className="text-xs text-silik mb-4">
+              Logo yüklemediysen bu simge kullanılır. Değişiklik, aşağıdaki <span className="text-metin font-semibold">Kaydet</span> düğmesiyle uygulanır.
+            </p>
+            <IkonSecici deger={form.ikon} onDegisti={(ikon) => setForm({ ...form, ikon })} />
+          </div>
         </div>
 
         <div className="kart p-6 space-y-5">

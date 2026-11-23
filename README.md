@@ -32,6 +32,7 @@ Mevcut veritabanı için `supabase/migrations/` altındaki dosyaları **sırayla
 | `003_cift_randevu_kilidi.sql` | Çakışan iki aktif randevuyu veritabanında engeller. Çakışan kayıt varsa hata verir; dosyanın başındaki sorguyla onları bul |
 | `004_giris_denemeleri.sql` | Süper admin girişi için deneme sınırı tablosu |
 | `005_hatirlatma.sql` | Hatırlatma ve Meta numara kimliği kolonları |
+| `006_salon_logo.sql` | Salon logosu kolonu, simge varsayılanı ve herkese açık `logolar` depolama alanı |
 
 ### 2. Vercel
 
