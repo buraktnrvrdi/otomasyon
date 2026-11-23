@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { sablonGonder } from "@/lib/whatsapp/sender";
+import { gonderilebilirMi } from "@/lib/whatsapp/kimlik";
 import { AKTIF_DURUMLAR, gecmisleriTamamla } from "@/lib/randevu-durum";
 import { uzunTarihMetni, yerelSaat } from "@/lib/utils/zaman";
 
@@ -44,7 +45,6 @@ export async function GET(req: NextRequest) {
     `)
     .in("durum", AKTIF_DURUMLAR)
     .is("hatirlatma_gonderildi_at", null)
-    .like("musteri_whatsapp", "+%")
     .gt("baslangic", new Date(simdi + EN_AZ_DAKIKA * 60_000).toISOString())
     .lte("baslangic", new Date(simdi + PENCERE_SAAT * 3600_000).toISOString());
 
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   let gonderilen = 0;
   const hatalar: string[] = [];
 
-  for (const r of randevular ?? []) {
+  for (const r of (randevular ?? []).filter((x) => gonderilebilirMi(x.musteri_whatsapp))) {
     // Önce işaretle: aynı anda çalışan iki görev aynı müşteriye iki mesaj atmasın.
     const { data: alindi } = await supabase
       .from("randevular")

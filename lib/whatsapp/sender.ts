@@ -1,3 +1,5 @@
+import { bsuidMi } from "./kimlik";
+
 interface Gonderen {
   /** Twilio: işletmenin numarası */
   numara?: string;
@@ -7,6 +9,12 @@ interface Gonderen {
 
 const saglayici = () => process.env.WHATSAPP_PROVIDER ?? "twilio";
 
+/** Telefon için `to`, BSUID için `recipient` alanı (Meta, numarası gizli kullanıcılara böyle gönderilir). */
+function metaHedef(kimlik: string): Record<string, string> {
+  if (bsuidMi(kimlik)) return { recipient_type: "individual", recipient: kimlik };
+  return { to: kimlik.replace("+", "") };
+}
+
 /** Serbest metin: sadece müşterinin son 24 saatte yazdığı sohbetlerde gönderilebilir. */
 export async function mesajGonder(
   to: string,
@@ -15,7 +23,7 @@ export async function mesajGonder(
 ): Promise<void> {
   if (saglayici() === "meta") {
     await metaPost(gonderen.phoneNumberId, {
-      to: to.replace("+", ""),
+      ...metaHedef(to),
       type: "text",
       text: { body: metin },
     });
@@ -37,7 +45,7 @@ export async function sablonGonder(
 ): Promise<void> {
   if (saglayici() === "meta") {
     await metaPost(gonderen.phoneNumberId, {
-      to: to.replace("+", ""),
+      ...metaHedef(to),
       type: "template",
       template: {
         name: sablon,

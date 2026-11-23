@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { tarihSaatMetni } from "@/lib/utils/zaman";
 import { redirect } from "next/navigation";
+import { kimlikGoster } from "@/lib/whatsapp/kimlik";
 import { gecmisleriTamamla } from "@/lib/randevu-durum";
 import GelmediButonu from "@/app/dashboard/GelmediButonu";
 import SayfaBasligi from "@/components/SayfaBasligi";
@@ -38,7 +39,7 @@ function RandevuTablosu({ randevular, isaretlenebilir = false }: { randevular: R
                 <td className="text-soluk text-xs whitespace-nowrap tabular-nums">{tarihSaatMetni(new Date(r.baslangic))}</td>
                 <td>
                   <p className="font-semibold">{r.musteri_ad}</p>
-                  <p className="text-xs text-silik">{r.musteri_whatsapp}</p>
+                  <p className="text-xs text-silik">{kimlikGoster(r.musteri_whatsapp)}</p>
                 </td>
                 <td className="text-soluk">{hizmet?.ad ?? "—"}</td>
                 {isaretlenebilir && (
