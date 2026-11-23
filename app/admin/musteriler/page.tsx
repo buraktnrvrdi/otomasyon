@@ -5,6 +5,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { tarihSaatMetni } from "@/lib/utils/zaman";
 import { redirect } from "next/navigation";
+import { kimlikGoster } from "@/lib/whatsapp/kimlik";
 import SayfaBasligi from "@/components/SayfaBasligi";
 
 interface MusteriSatir {
@@ -81,7 +82,7 @@ export default async function MusterilerPage() {
                         <span className="font-semibold">{m.musteri_ad}</span>
                       </div>
                     </td>
-                    <td className="text-soluk whitespace-nowrap">{m.musteri_whatsapp}</td>
+                    <td className="text-soluk whitespace-nowrap">{kimlikGoster(m.musteri_whatsapp)}</td>
                     <td>
                       <span className="rozet rozet-gri">{m.toplam}</span>
                     </td>

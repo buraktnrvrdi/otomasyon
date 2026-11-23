@@ -7,6 +7,7 @@ import { gunEkle, haftaGunu, uzunTarihMetni, yerelAn, yerelSaat, yerelTarih } fr
 import Link from "next/link";
 import { gecmisleriTamamla } from "@/lib/randevu-durum";
 import { redirect } from "next/navigation";
+import { kimlikGoster } from "@/lib/whatsapp/kimlik";
 import SayfaBasligi from "@/components/SayfaBasligi";
 import { ArtiIkon, TakvimIkon } from "@/components/ikonlar";
 import AutoRefresh from "./AutoRefresh";
@@ -172,7 +173,7 @@ export default async function DashboardPage({
                         <p className="text-sm text-soluk mt-0.5">
                           {r.hizmet ? `${r.hizmet.ad} · ${r.hizmet.sure_dakika} dk · ${r.hizmet.fiyat} ₺` : "Hizmet silinmiş"}
                         </p>
-                        <p className="text-xs text-silik mt-1">{r.musteri_whatsapp}</p>
+                        <p className="text-xs text-silik mt-1">{kimlikGoster(r.musteri_whatsapp)}</p>
                       </div>
 
                       <div className="flex flex-col items-start sm:items-end gap-2.5 w-full sm:w-auto">

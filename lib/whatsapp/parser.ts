@@ -1,4 +1,5 @@
 import type { WhatsAppMessage } from "./types";
+import { bsuidMi } from "./kimlik";
 
 /** "+905551234567" biçimine getirir; yurt içi yazımlar (0555..., 555...) Türkiye kabul edilir. */
 export function numaraNormalize(no: string): string {
@@ -30,8 +31,14 @@ export function parseMetaPayload(body: unknown): WhatsAppMessage | null {
 
     if (!message || message.type !== "text") return null;
 
+    // Telefon varsa onu kullan; kullanıcı adı açık kişilerde Meta yalnızca BSUID gönderir.
+    const telefon = numaraNormalize(message.from ?? value?.contacts?.[0]?.wa_id ?? "");
+    const bsuid = String(message.from_user_id ?? value?.contacts?.[0]?.user_id ?? "");
+    const from = telefon || (bsuidMi(bsuid) ? bsuid : "");
+    if (!from) return null;
+
     return {
-      from: numaraNormalize(message.from),
+      from,
       to: numaraNormalize(value.metadata?.display_phone_number ?? ""),
       phoneNumberId: value.metadata?.phone_number_id,
       text: message.text.body.trim(),
