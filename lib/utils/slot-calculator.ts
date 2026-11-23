@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { gunEkle, haftaGunu, saatiDakikaya, yerelAn } from "./zaman";
+import { AKTIF_DURUMLAR } from "@/lib/randevu-durum";
 
 export interface BosSlot {
   baslangic: Date;
@@ -41,7 +42,7 @@ export async function bosSlotlariGetir(
     .eq("isletme_id", isletmeId)
     .lt("baslangic", gunBitis.toISOString())
     .gt("bitis", gunBaslangic.toISOString())
-    .in("durum", ["beklemede", "onaylandi"]);
+    .in("durum", AKTIF_DURUMLAR);
 
   const dk = (iso: string) => (new Date(iso).getTime() - gunBaslangic.getTime()) / 60_000;
   const mesgul = (mevcutRandevular ?? []).map((r) => ({ bas: dk(r.baslangic), bit: dk(r.bitis) }));

@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { bosSlotlariGetir } from "@/lib/utils/slot-calculator";
 import { gecerliTarihMi, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
+import { AKTIF_DURUMLAR } from "@/lib/randevu-durum";
 
 /**
  * Müşteri kimliği (musteriNo) her zaman sunucudan gelir; modelin ürettiği
@@ -127,7 +128,8 @@ export async function toolCalistir(
       .eq("id", randevu_id)
       .eq("isletme_id", isletmeId)
       .eq("musteri_whatsapp", musteriNo)
-      .in("durum", ["beklemede", "onaylandi"])
+      .in("durum", AKTIF_DURUMLAR)
+      .gt("baslangic", new Date().toISOString())
       .select("id");
 
     if (error || !data?.length) {
@@ -158,7 +160,8 @@ export async function toolCalistir(
       `)
       .eq("musteri_whatsapp", musteriNo)
       .eq("isletme_id", isletmeId)
-      .in("durum", ["beklemede", "onaylandi"])
+      .in("durum", AKTIF_DURUMLAR)
+      .gt("bitis", new Date().toISOString())
       .order("baslangic", { ascending: true });
 
     if (error) {

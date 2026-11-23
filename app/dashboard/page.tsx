@@ -4,9 +4,18 @@ import { createServerClient } from "@/lib/supabase/server";
 import { getIsletmeId } from "@/lib/supabase/auth";
 import { gunEkle, haftaGunu, uzunTarihMetni, yerelAn, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 import Link from "next/link";
+import { gecmisleriTamamla } from "@/lib/randevu-durum";
 import { redirect } from "next/navigation";
 import AutoRefresh from "./AutoRefresh";
 import RandevuEylemleri from "./RandevuEylemleri";
+import GelmediButonu from "./GelmediButonu";
+
+const DURUM_ROZET: Record<string, { etiket: string; renk: string }> = {
+  onaylandi: { etiket: "Onaylandi", renk: "bg-green-100 text-green-700" },
+  beklemede: { etiket: "Beklemede", renk: "bg-yellow-100 text-yellow-700" },
+  tamamlandi: { etiket: "Tamamlandi", renk: "bg-gray-100 text-gray-500" },
+  gelmedi: { etiket: "Gelmedi", renk: "bg-orange-100 text-orange-700" },
+};
 
 /** biter: dahil olmayan üst sınır */
 function getAralik(filtre: string): { baslar: Date; biter: Date; label: string } {
@@ -43,6 +52,7 @@ export default async function DashboardPage({
   if (!isletme_id) redirect("/admin/login");
 
   const { filtre = "bugun" } = await searchParams;
+  await gecmisleriTamamla(isletme_id);
   const supabase = await createServerClient();
   const { baslar, biter, label } = getAralik(filtre);
 
@@ -121,18 +131,20 @@ export default async function DashboardPage({
                   </p>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      r.durum === "onaylandi"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
+                      DURUM_ROZET[r.durum]?.renk ?? "bg-gray-100 text-gray-600"
                     }`}
                   >
-                    {r.durum}
+                    {DURUM_ROZET[r.durum]?.etiket ?? r.durum}
                   </span>
-                  <RandevuEylemleri
-                    id={r.id}
-                    hizmetId={r.hizmet_id ?? null}
-                    baslangic={r.baslangic}
-                  />
+                  {r.durum === "tamamlandi" || r.durum === "gelmedi" ? (
+                    <GelmediButonu id={r.id} durum={r.durum} />
+                  ) : (
+                    <RandevuEylemleri
+                      id={r.id}
+                      hizmetId={r.hizmet_id ?? null}
+                      baslangic={r.baslangic}
+                    />
+                  )}
                 </div>
               </li>
             );
