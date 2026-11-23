@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SayfaBasligi from "@/components/SayfaBasligi";
 
-const GUNLER = ["Pazar", "Pazartesi", "Sali", "Carsamba", "Persembe", "Cuma", "Cumartesi"];
+const GUNLER = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+// Pazartesi ile başlayan sıra
+const SIRA = [1, 2, 3, 4, 5, 6, 0];
 
 interface Saat {
   id: string;
@@ -18,7 +21,14 @@ export default function SaatlerPage() {
 
   async function yukle() {
     const r = await fetch("/api/admin/saatler");
-    setSaatler(await r.json());
+    const data = await r.json();
+    if (Array.isArray(data)) {
+      setSaatler(
+        data
+          .map((s: Saat) => ({ ...s, acilis: s.acilis.slice(0, 5), kapanis: s.kapanis.slice(0, 5) }))
+          .sort((a: Saat, b: Saat) => SIRA.indexOf(a.gun) - SIRA.indexOf(b.gun))
+      );
+    }
   }
 
   useEffect(() => { yukle(); }, []);
@@ -39,74 +49,59 @@ export default function SaatlerPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-semibold text-gray-900 mb-1">Calisma Saatleri</h1>
-      <p className="text-gray-400 text-sm mb-6">Gunluk acilis ve kapanis saatlerini ayarlayin</p>
+      <SayfaBasligi baslik="Çalışma" vurgu="saatleri" aciklama="Bot sadece açık olduğun saatlerde randevu verir" />
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3 w-32">Gun</th>
-              <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Durum</th>
-              <th className="text-left text-xs font-medium text-gray-400 uppercase tracking-wider px-5 py-3">Saatler</th>
-              <th className="px-5 py-3"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {saatler.map((s) => (
-              <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-3.5 font-medium text-gray-900">{GUNLER[s.gun]}</td>
-                <td className="px-5 py-3.5">
-                  <button
-                    onClick={() => {
-                      const guncellenmis = { ...s, kapali: !s.kapali };
-                      set(s.id, "kapali", !s.kapali);
-                      guncelle(guncellenmis);
-                    }}
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
-                      s.kapali
-                        ? "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                        : "bg-green-50 text-green-700 hover:bg-green-100"
-                    }`}
-                  >
-                    {s.kapali ? "Kapali" : "Acik"}
-                  </button>
-                </td>
-                <td className="px-5 py-3.5">
-                  {s.kapali ? (
-                    <span className="text-gray-300">—</span>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="time"
-                        className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-                        value={s.acilis}
-                        onChange={(e) => set(s.id, "acilis", e.target.value)}
-                      />
-                      <span className="text-gray-300">—</span>
-                      <input
-                        type="time"
-                        className="border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
-                        value={s.kapanis}
-                        onChange={(e) => set(s.id, "kapanis", e.target.value)}
-                      />
-                    </div>
-                  )}
-                </td>
-                <td className="px-5 py-3.5 text-right">
-                  {!s.kapali && (
-                    <button
-                      onClick={() => guncelle(s)}
-                      className="text-xs text-gray-400 hover:text-gray-900 transition-colors font-medium"
-                    >
-                      {kaydedilen === s.id ? "Kaydedildi" : "Kaydet"}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-2.5">
+        {saatler.map((s) => (
+          <div key={s.id} className="kart px-5 py-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <p className="font-semibold w-28">{GUNLER[s.gun]}</p>
+
+            <button
+              role="switch"
+              aria-checked={!s.kapali}
+              onClick={() => {
+                set(s.id, "kapali", !s.kapali);
+                guncelle({ ...s, kapali: !s.kapali });
+              }}
+              className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${s.kapali ? "bg-yuzey-3" : "bg-turuncu"}`}
+              title={s.kapali ? "Kapalı" : "Açık"}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${s.kapali ? "" : "translate-x-5"}`}
+              />
+            </button>
+
+            {s.kapali ? (
+              <span className="rozet rozet-gri">Kapalı</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  aria-label={`${GUNLER[s.gun]} açılış`}
+                  className="girdi w-auto py-2"
+                  value={s.acilis}
+                  onChange={(e) => set(s.id, "acilis", e.target.value)}
+                />
+                <span className="text-silik">–</span>
+                <input
+                  type="time"
+                  aria-label={`${GUNLER[s.gun]} kapanış`}
+                  className="girdi w-auto py-2"
+                  value={s.kapanis}
+                  onChange={(e) => set(s.id, "kapanis", e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="ml-auto">
+              {!s.kapali && (
+                <button onClick={() => guncelle(s)} className="btn btn-cizgili btn-kucuk">
+                  {kaydedilen === s.id ? "Kaydedildi ✓" : "Kaydet"}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { tarihSaatMetni } from "@/lib/utils/zaman";
+import { Logo } from "@/components/Logo";
+import SayfaBasligi from "@/components/SayfaBasligi";
+import { ArtiIkon, CikisIkon, TikIkon } from "@/components/ikonlar";
 
 interface DavetKodu {
   id: string;
@@ -17,6 +20,7 @@ export default function SuperPage() {
   const [yukleniyor, setYukleniyor] = useState(false);
   const [yeniKod, setYeniKod] = useState<string | null>(null);
   const [hata, setHata] = useState("");
+  const [kopyalandi, setKopyalandi] = useState<string | null>(null);
 
   async function yukle() {
     const r = await fetch("/api/super/kodlar", { cache: "no-store" });
@@ -35,7 +39,7 @@ export default function SuperPage() {
     const data = await r.json().catch(() => ({}));
     setYukleniyor(false);
     if (r.status === 401) { router.replace("/super/login"); return; }
-    if (!r.ok) { setHata(data.hata ?? "Kod olusturulamadi."); return; }
+    if (!r.ok) { setHata(data.hata ?? "Kod oluşturulamadı."); return; }
     if (data.kod) {
       setYeniKod(data.kod);
       yukle();
@@ -47,78 +51,94 @@ export default function SuperPage() {
     router.push("/super/login");
   }
 
+  const aktifSayi = kodlar.filter((k) => !k.kullanildi).length;
+
+  async function linkKopyala(kod: string) {
+    await navigator.clipboard.writeText(`${window.location.origin}/kayit?kod=${kod}`);
+    setKopyalandi(kod);
+    setTimeout(() => setKopyalandi(null), 2000);
+  }
+
   return (
-    <div className="min-h-screen bg-[#0f1117] text-white p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-xl font-semibold">Super Admin</h1>
-            <p className="text-white/40 text-sm mt-0.5">Davet kodu yonetimi</p>
-          </div>
-          <button
-            onClick={cikis}
-            className="text-xs text-white/40 hover:text-red-400 transition-colors"
-          >
-            Cikis Yap
+    <div className="isima min-h-screen px-4 py-10 sm:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-center justify-between mb-10">
+          <Logo />
+          <button onClick={cikis} className="btn btn-cizgili btn-kucuk">
+            <CikisIkon className="w-4 h-4" />
+            Çıkış
           </button>
         </div>
 
-        <button
-          onClick={kodUret}
-          disabled={yukleniyor}
-          className="mb-6 bg-white text-[#0f1117] px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 hover:bg-white/90 transition-colors"
-        >
-          {yukleniyor ? "Olusturuluyor..." : "Yeni Kod Uret"}
-        </button>
+        <SayfaBasligi baslik="Davet" vurgu="kodları" aciklama="Yeni salonlar bu kodlarla kayıt olur">
+          <button onClick={kodUret} disabled={yukleniyor} className="btn btn-ana">
+            <ArtiIkon className="w-4 h-4" />
+            {yukleniyor ? "Oluşturuluyor..." : "Yeni Kod Üret"}
+          </button>
+        </SayfaBasligi>
 
-        {hata && (
-          <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl px-5 py-3">
-            <p className="text-red-400 text-sm">{hata}</p>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="kart p-5">
+            <p className="etiket mb-1">Aktif</p>
+            <p className="text-3xl font-bold text-turuncu">{aktifSayi}</p>
           </div>
-        )}
+          <div className="kart p-5">
+            <p className="etiket mb-1">Kullanılmış</p>
+            <p className="text-3xl font-bold">{kodlar.length - aktifSayi}</p>
+          </div>
+        </div>
+
+        {hata && <p className="uyari-kutusu uyari-hata mb-6">{hata}</p>}
 
         {yeniKod && (
-          <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl px-5 py-4">
-            <p className="text-xs text-green-400 mb-1">Yeni kod olusturuldu</p>
-            <p className="text-2xl font-mono font-bold tracking-widest text-green-300">{yeniKod}</p>
-            <p className="text-xs text-white/40 mt-1">Bu kodu musteri ile paylasin</p>
+          <div className="kart mb-6 p-6 border-turuncu/40 bg-gradient-to-br from-turuncu/15 to-transparent">
+            <p className="etiket text-turuncu-acik">Yeni kod hazır</p>
+            <p className="text-3xl font-bold tracking-[0.25em] mt-1">{yeniKod}</p>
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              <button onClick={() => linkKopyala(yeniKod)} className="btn btn-beyaz btn-kucuk">
+                {kopyalandi === yeniKod ? <><TikIkon className="w-4 h-4" /> Kopyalandı</> : "Kayıt linkini kopyala"}
+              </button>
+              <span className="text-xs text-soluk">Linki salona gönder, kod otomatik dolar.</span>
+            </div>
           </div>
         )}
 
-        <div className="bg-white/5 rounded-xl border border-white/10 overflow-hidden">
+        <div className="kart overflow-hidden">
           {kodlar.length === 0 ? (
-            <p className="text-white/40 text-sm p-6">Henuz kod olusturulmadi.</p>
+            <p className="text-soluk text-sm p-6">Henüz kod oluşturulmadı.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider px-5 py-3">Kod</th>
-                  <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider px-5 py-3">Durum</th>
-                  <th className="text-left text-xs font-medium text-white/40 uppercase tracking-wider px-5 py-3">Tarih</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {kodlar.map((k) => (
-                  <tr key={k.id}>
-                    <td className="px-5 py-3.5 font-mono font-bold tracking-widest text-white">
-                      {k.kod}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                        k.kullanildi
-                          ? "bg-white/10 text-white/40"
-                          : "bg-green-500/15 text-green-400"
-                      }`}>
-                        {k.kullanildi ? "Kullanildi" : "Aktif"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-white/40 text-xs font-mono">
-                      {tarihSaatMetni(new Date(k.olusturuldu_at))}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="tablo">
+                <thead>
+                  <tr>
+                    <th>Kod</th>
+                    <th>Durum</th>
+                    <th>Oluşturulma</th>
+                    <th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {kodlar.map((k) => (
+                    <tr key={k.id}>
+                      <td className="font-semibold tracking-[0.2em]">{k.kod}</td>
+                      <td>
+                        <span className={`rozet ${k.kullanildi ? "rozet-gri" : "rozet-turuncu"}`}>
+                          {k.kullanildi ? "Kullanıldı" : "Aktif"}
+                        </span>
+                      </td>
+                      <td className="text-soluk text-xs">{tarihSaatMetni(new Date(k.olusturuldu_at))}</td>
+                      <td className="text-right">
+                        {!k.kullanildi && (
+                          <button onClick={() => linkKopyala(k.kod)} className="btn btn-cizgili btn-kucuk">
+                            {kopyalandi === k.kod ? "Kopyalandı" : "Linki kopyala"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

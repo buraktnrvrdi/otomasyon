@@ -28,14 +28,14 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   async function iptalEt() {
-    if (!confirm("Bu randevuyu iptal etmek istediginize emin misiniz?")) return;
+    if (!confirm("Bu randevuyu iptal etmek istediğine emin misin?")) return;
     setYukleniyor(true);
     setHata("");
     const res = await fetch(`/api/randevular/${id}`, { method: "PATCH" });
     setYukleniyor(false);
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setHata(json.error ?? "Bir hata olustu.");
+      setHata(json.error ?? "Bir hata oluştu.");
       return;
     }
     router.refresh();
@@ -55,7 +55,7 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
   }
 
   async function kaydet() {
-    if (!hizmetler.some((h) => h.id === seciliHizmetId)) { setHata("Hizmet secin."); return; }
+    if (!hizmetler.some((h) => h.id === seciliHizmetId)) { setHata("Hizmet seçin."); return; }
     setYukleniyor(true);
     setHata("");
     const res = await fetch(`/api/randevular/${id}`, {
@@ -66,7 +66,7 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
     setYukleniyor(false);
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setHata(json.error ?? "Bir hata olustu.");
+      setHata(json.error ?? "Bir hata oluştu.");
       return;
     }
     setModalAcik(false);
@@ -79,49 +79,55 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
         setModalAcik(false);
       }
     }
-    if (modalAcik) document.addEventListener("mousedown", kapat);
-    return () => document.removeEventListener("mousedown", kapat);
+    function tus(e: KeyboardEvent) {
+      if (e.key === "Escape") setModalAcik(false);
+    }
+    if (modalAcik) {
+      document.addEventListener("mousedown", kapat);
+      document.addEventListener("keydown", tus);
+    }
+    return () => {
+      document.removeEventListener("mousedown", kapat);
+      document.removeEventListener("keydown", tus);
+    };
   }, [modalAcik]);
 
   return (
     <>
-      <div className="flex gap-1.5">
-        <button
-          onClick={duzenleAc}
-          className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-        >
-          Duzenle
+      <div className="flex gap-2">
+        <button onClick={duzenleAc} className="btn btn-cizgili btn-kucuk">
+          Düzenle
         </button>
-        <button
-          onClick={iptalEt}
-          disabled={yukleniyor}
-          className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-40 transition-colors"
-        >
-          {yukleniyor ? "..." : "Iptal"}
+        <button onClick={iptalEt} disabled={yukleniyor} className="btn btn-tehlike btn-kucuk">
+          {yukleniyor ? "..." : "İptal"}
         </button>
       </div>
 
-      {hata && !modalAcik && (
-        <p className="text-xs text-red-500 mt-1">{hata}</p>
-      )}
+      {hata && !modalAcik && <p className="text-xs text-hata mt-1">{hata}</p>}
 
       {modalAcik && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4">
           <div
             ref={modalRef}
-            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="duzenle-baslik"
+            className="kart w-full sm:max-w-sm p-6 rounded-b-none sm:rounded-[var(--radius-kart)] shadow-[0_30px_80px_-20px_rgb(0_0_0/0.9)]"
           >
-            <h2 className="text-base font-semibold text-gray-900 mb-4">Randevu Duzenle</h2>
+            <h2 id="duzenle-baslik" className="text-xl font-bold mb-5">
+              Randevuyu <span className="text-turuncu">düzenle</span>
+            </h2>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Hizmet</label>
+                <label className="etiket" htmlFor="d-hizmet">Hizmet</label>
                 <select
+                  id="d-hizmet"
                   value={seciliHizmetId}
                   onChange={(e) => setSeciliHizmetId(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  className="girdi"
                 >
-                  <option value="">Secin...</option>
+                  <option value="">Seçin...</option>
                   {hizmetler.map((h) => (
                     <option key={h.id} value={h.id}>
                       {h.ad} ({h.sure_dakika} dk)
@@ -130,41 +136,25 @@ export default function RandevuEylemleri({ id, hizmetId, baslangic }: Props) {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Tarih</label>
-                <input
-                  type="date"
-                  value={tarih}
-                  onChange={(e) => setTarih(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="etiket" htmlFor="d-tarih">Tarih</label>
+                  <input id="d-tarih" type="date" value={tarih} onChange={(e) => setTarih(e.target.value)} className="girdi" />
+                </div>
+                <div>
+                  <label className="etiket" htmlFor="d-saat">Saat</label>
+                  <input id="d-saat" type="time" value={saat} onChange={(e) => setSaat(e.target.value)} className="girdi" />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Saat</label>
-                <input
-                  type="time"
-                  value={saat}
-                  onChange={(e) => setSaat(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                />
-              </div>
-
-              {hata && <p className="text-xs text-red-500">{hata}</p>}
+              {hata && <p className="uyari-kutusu uyari-hata">{hata}</p>}
             </div>
 
-            <div className="flex gap-2 mt-5">
-              <button
-                onClick={() => setModalAcik(false)}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Vazgec
+            <div className="flex gap-2 mt-6">
+              <button onClick={() => setModalAcik(false)} className="btn btn-cizgili flex-1">
+                Vazgeç
               </button>
-              <button
-                onClick={kaydet}
-                disabled={yukleniyor}
-                className="flex-1 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-40 transition-colors"
-              >
+              <button onClick={kaydet} disabled={yukleniyor} className="btn btn-ana flex-1">
                 {yukleniyor ? "..." : "Kaydet"}
               </button>
             </div>
