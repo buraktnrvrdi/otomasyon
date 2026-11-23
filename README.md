@@ -55,9 +55,24 @@ Webhook adresi: `https://<alan-adin>/api/webhook/whatsapp`
 
 **Meta Cloud API**
 
-1. Meta for Developers'da bir uygulama oluştur, WhatsApp ürününü ekle ve işletme doğrulamasını tamamla.
-2. Webhook adresini ve `WHATSAPP_VERIFY_TOKEN` değerini gir, `messages` alanına abone ol.
-3. `WHATSAPP_PROVIDER=meta`, `META_ACCESS_TOKEN` (kalıcı sistem kullanıcısı token'ı), `META_PHONE_NUMBER_ID` ve **`META_APP_SECRET`** değerlerini gir. `META_APP_SECRET` olmadan tüm mesajlar reddedilir.
+1. Meta for Developers'da Business tipinde bir uygulama oluştur ve WhatsApp ürününü ekle. WhatsApp > API Setup sayfasından `Phone number ID` ve `WhatsApp Business Account ID` (WABA) değerlerini al.
+2. **Kalıcı token:** Business Settings > Users > System users > yeni sistem kullanıcısı. Uygulamayı ve WhatsApp hesabını ona ata, `whatsapp_business_messaging` ve `whatsapp_business_management` izinleriyle süresiz token üret. API Setup sayfasındaki geçici token birkaç saatte biter, canlıda kullanma.
+3. Vercel'e `WHATSAPP_PROVIDER=meta`, `META_ACCESS_TOKEN`, `META_PHONE_NUMBER_ID` ve **`META_APP_SECRET`** (App settings > Basic) değerlerini gir ve yeniden deploy et. `META_APP_SECRET` olmadan tüm mesajlar reddedilir.
+4. WhatsApp > Configuration: webhook adresini ve `WHATSAPP_VERIFY_TOKEN` değerini gir, "Verify and save", sonra `messages` alanına abone ol.
+5. **WABA'yı uygulamaya bağla** (atlanırsa Meta mesajları webhook'a hiç göndermez). Token'ı kimseyle paylaşmadan kendi terminalinde çalıştır:
+
+   ```bash
+   curl -X POST "https://graph.facebook.com/v24.0/WABA_ID/subscribed_apps" -H "Authorization: Bearer TOKEN"
+   ```
+
+6. Test numarası kullanıyorsan mesaj atacak telefonları API Setup > "To" listesine ekleyip doğrula. Test numarası yalnızca bu listeye yazabilir (hata `131030`).
+
+**Mesaj gitmiyorsa:** Vercel > Logs'ta `[WA` ile ara.
+
+- `[WA gonderildi] id=...`: Meta mesajı kabul etti.
+- `[WA durum] delivered` / `read`: mesaj telefona ulaştı.
+- `[WA durum] failed code=... "..."`: Meta mesajı teslim edemedi; kod ve açıklama nedeni söyler (ör. `131030` izinli listede değil, `131047` 24 saat penceresi kapalı, `131042` ödeme yöntemi eksik).
+- Hiç `[WA` satırı yoksa istek webhook'a gelmiyor: 4. ve 5. adımları kontrol et.
 
 **Her salon için:** Admin paneli > İşletme Bilgileri > "WhatsApp Bot Numarası" alanına, müşterilerin yazacağı numarayı `+90...` biçiminde gir. Gelen mesajlar bu numaraya göre doğru salona yönlenir.
 
