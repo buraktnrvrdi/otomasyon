@@ -50,7 +50,8 @@ CREATE TABLE randevular (
   baslangic        TIMESTAMPTZ NOT NULL,
   bitis            TIMESTAMPTZ NOT NULL,
   durum            TEXT DEFAULT 'beklemede'
-                   CHECK (durum IN ('beklemede','onaylandi','iptal','tamamlandi')),
+                   CONSTRAINT randevular_durum_check
+                   CHECK (durum IN ('beklemede','onaylandi','iptal','tamamlandi','gelmedi')),
   notlar           TEXT,
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
