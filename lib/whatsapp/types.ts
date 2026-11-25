@@ -5,6 +5,8 @@ export interface WhatsAppMessage {
   to: string;
   /** Meta Cloud API'de cevabın gönderileceği numara kimliği */
   phoneNumberId?: string;
+  /** Platformun mesaj kimliği (wamid... / SM...); aynı mesajın tekrar gelmesini yakalamak için. */
+  mesajId?: string;
   /** Mesaj metin değilse türü (audio, image, location...); bot bu durumda kısa bir uyarı gönderir. */
   desteklenmeyen?: string;
 }

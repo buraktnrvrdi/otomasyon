@@ -102,6 +102,16 @@ CREATE TABLE giris_denemeleri (
 CREATE INDEX idx_giris_denemeleri ON giris_denemeleri(anahtar, zaman);
 
 -- =============================================
+-- TABLO 8: islenen_mesajlar (WhatsApp mesaj tekrar kontrolü)
+-- =============================================
+CREATE TABLE islenen_mesajlar (
+  mesaj_id        TEXT PRIMARY KEY,
+  olusturuldu_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_islenen_mesajlar_zaman ON islenen_mesajlar(olusturuldu_at);
+
+-- =============================================
 -- ROW LEVEL SECURITY
 -- =============================================
 ALTER TABLE isletme          ENABLE ROW LEVEL SECURITY;
@@ -111,6 +121,7 @@ ALTER TABLE randevular       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE davet_kodlari    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE konusmalar       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE giris_denemeleri ENABLE ROW LEVEL SECURITY;
+ALTER TABLE islenen_mesajlar ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_all" ON isletme
   FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -131,6 +142,9 @@ CREATE POLICY "service_role_all" ON konusmalar
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE POLICY "service_role_all" ON giris_denemeleri
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON islenen_mesajlar
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- =============================================

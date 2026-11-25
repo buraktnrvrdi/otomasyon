@@ -1,17 +1,12 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { istemciIp } from "@/lib/sinirlayici";
 
 const PENCERE_MS = 15 * 60 * 1000;
 const IP_BASINA_SINIR = 5;
 const TOPLAM_SINIR = 50;
 const TOPLAM = "super:*";
 
-export function istemciIp(headers: Headers): string {
-  return (
-    headers.get("x-forwarded-for")?.split(",")[0].trim() ||
-    headers.get("x-real-ip") ||
-    "bilinmiyor"
-  );
-}
+export { istemciIp };
 
 async function sayi(anahtar: string): Promise<number> {
   const supabase = await createServerClient();

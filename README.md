@@ -33,6 +33,7 @@ Mevcut veritabanı için `supabase/migrations/` altındaki dosyaları **sırayla
 | `004_giris_denemeleri.sql` | Süper admin girişi için deneme sınırı tablosu |
 | `005_hatirlatma.sql` | Hatırlatma ve Meta numara kimliği kolonları |
 | `006_salon_logo.sql` | Salon logosu kolonu, simge varsayılanı ve herkese açık `logolar` depolama alanı |
+| `007_mesaj_tekrar_kontrolu.sql` | WhatsApp mesaj tekrar kontrolü (`islenen_mesajlar`) |
 
 ### 2. Vercel
 
@@ -88,6 +89,28 @@ Değişkenler sırasıyla müşteri adı, salon adı, tarih, saat ve hizmettir.
 - **Twilio:** Content Template Builder'da oluşturup WhatsApp onayına gönder. Content SID'yi (`HX...`) `WHATSAPP_HATIRLATMA_SABLONU` değerine yaz.
 
 `WHATSAPP_HATIRLATMA_SABLONU` boş bırakılırsa hatırlatma gönderilmez, uygulamanın geri kalanı normal çalışır.
+
+### 5. Hata uyarıları (önerilir)
+
+Bot ya da WhatsApp bağlantısı bozulduğunda (token süresi dolması, mesaj teslim hatası, model hatası, şifre e-postası gitmemesi) yöneticiye bildirim gider. Aynı konu için 15 dakikada en fazla bir bildirim gelir. Kanalların hiçbiri ayarlı değilse hatalar sadece Vercel loguna yazılır.
+
+- **Telegram:** @BotFather ile bir bot oluştur, `TELEGRAM_BOT_TOKEN` değerini al. Bota bir mesaj yazıp `https://api.telegram.org/bot<TOKEN>/getUpdates` adresinden `chat.id` değerini bul ve `TELEGRAM_CHAT_ID` olarak gir.
+- **Slack / Discord:** gelen-webhook adresini `UYARI_WEBHOOK_URL` olarak gir.
+
+### 6. Şifre sıfırlama e-postası
+
+"Şifreni mi unuttun?" akışı Supabase'in e-postasını kullanır. Çalışması için:
+
+1. **Authentication > URL Configuration:** "Site URL" alanına canlı adresi yaz, "Redirect URLs" listesine `https://<alan-adin>/**` ekle.
+2. **Authentication > Emails (SMTP):** Supabase'in varsayılan e-posta servisi çok düşük sınırlıdır ve proje ekibi dışındaki adreslere göndermez. Canlıda kendi SMTP'ni bağla (ör. Resend, Brevo; ücretsiz katmanları yeterlidir).
+3. İsteğe bağlı: bağlantının farklı cihazda da açılması için **Authentication > Email Templates > Reset Password** şablonunda bağlantıyı şu şekilde değiştir:
+   `{{ .SiteURL }}/api/admin/sifre-callback?token_hash={{ .TokenHash }}&type=recovery`
+
+## Koruma önlemleri
+
+- **Hız sınırı:** Müşteri başına 10 dakikada 20, günde 120 bot mesajı; web sohbetinde IP başına 10 dakikada 30; salon başına günde 1500 (`BOT_SALON_GUNLUK_SINIR` ile değişir). Sınır aşılınca müşteriye kısa bir uyarı gider ve model çağrılmaz. Salon girişinde 15 dakikada 5 hatalı denemeden sonra kilitlenir.
+- **Tekrar kontrolü:** Meta aynı mesajı tekrar gönderirse ikinci kez işlenmez. Cevap arka planda üretildiği için Meta zamanında 200 alır.
+- **Müşteri cevapsız kalmaz:** Model ya da WhatsApp hatasında müşteriye "şu an yanıt veremiyorum" mesajı gider, yöneticiye uyarı düşer.
 
 ## Önemli davranışlar
 

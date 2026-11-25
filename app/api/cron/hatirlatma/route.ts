@@ -5,6 +5,9 @@ import { sablonGonder } from "@/lib/whatsapp/sender";
 import { gonderilebilirMi } from "@/lib/whatsapp/kimlik";
 import { AKTIF_DURUMLAR, gecmisleriTamamla } from "@/lib/randevu-durum";
 import { uzunTarihMetni, yerelSaat } from "@/lib/utils/zaman";
+import { eskileriTemizle } from "@/lib/sinirlayici";
+import { eskiMesajlariTemizle } from "@/lib/tekrar";
+import { uyar } from "@/lib/uyari";
 
 /** Günde bir kez çalışınca ertesi günün akşamına kadar olan randevuları kapsar. */
 const PENCERE_SAAT = 36;
@@ -28,6 +31,9 @@ export async function GET(req: NextRequest) {
 
   // Kimse paneli açmasa da durumlar güncel kalsın (tüm işletmeler).
   await gecmisleriTamamla();
+
+  // Hız sınırı ve tekrar kontrolü kayıtları şişmesin.
+  await Promise.allSettled([eskileriTemizle(), eskiMesajlariTemizle()]);
 
   const sablon = process.env.WHATSAPP_HATIRLATMA_SABLONU;
   if (!sablon) {
@@ -96,6 +102,9 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  if (hatalar.length) console.error("[Hatirlatma]", hatalar);
+  if (hatalar.length) {
+    console.error("[Hatirlatma]", hatalar);
+    await uyar(`${hatalar.length} hatırlatma gönderilemedi`, hatalar[0].slice(0, 300), "hatirlatma", 360);
+  }
   return NextResponse.json({ aday: randevular?.length ?? 0, gonderilen, hata: hatalar.length });
 }
