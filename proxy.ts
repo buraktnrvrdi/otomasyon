@@ -15,7 +15,11 @@ export async function proxy(req: NextRequest) {
   }
 
   // Kayit ve admin login - herkese acik
-  if (pathname === "/kayit" || pathname.startsWith("/admin/login")) {
+  if (
+    pathname === "/kayit" ||
+    pathname.startsWith("/admin/login") ||
+    pathname.startsWith("/admin/sifremi-unuttum")
+  ) {
     return NextResponse.next();
   }
 

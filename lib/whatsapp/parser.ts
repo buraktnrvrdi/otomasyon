@@ -21,6 +21,7 @@ export function parseTwilioPayload(form: URLSearchParams): WhatsAppMessage | nul
     from: numaraNormalize(from),
     to: numaraNormalize(to),
     text: body.trim(),
+    mesajId: form.get("MessageSid")?.toString() || undefined,
   };
 }
 
@@ -68,6 +69,7 @@ export function parseMetaPayload(body: unknown): WhatsAppMessage | null {
         to: numaraNormalize(value.metadata?.display_phone_number ?? ""),
         phoneNumberId: value.metadata?.phone_number_id,
         text: metin,
+        mesajId: typeof message.id === "string" ? message.id : undefined,
         // Sesli mesaj, fotoğraf, konum vb. botun anlayamadığı içerikler.
         desteklenmeyen: !metin && message.type !== "reaction" ? message.type ?? "bilinmiyor" : undefined,
       };

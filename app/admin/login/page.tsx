@@ -63,7 +63,12 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label className="etiket" htmlFor="sifre">Şifre</label>
+          <div className="flex items-baseline justify-between">
+            <label className="etiket" htmlFor="sifre">Şifre</label>
+            <Link href="/admin/sifremi-unuttum" className="text-xs text-soluk hover:text-turuncu transition-colors">
+              Şifreni mi unuttun?
+            </Link>
+          </div>
           <input
             id="sifre"
             type="password"

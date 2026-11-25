@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { botYaniti } from "@/lib/bot";
 import { mesajGonder } from "@/lib/whatsapp/sender";
 import { parseTwilioPayload, parseMetaPayload, parseMetaDurumlari } from "@/lib/whatsapp/parser";
 import type { WhatsAppDurum, WhatsAppMessage } from "@/lib/whatsapp/types";
 import { metaImzaGecerli, twilioImzaGecerli } from "@/lib/whatsapp/signature";
 import { createServerClient } from "@/lib/supabase/server";
+import { botHakki, uyariGonderilsinMi, HATA_MESAJI, SINIR_MESAJI, YOGUN_MESAJI } from "@/lib/bot/koruma";
+import { ilkKezMi } from "@/lib/tekrar";
+import { uyar } from "@/lib/uyari";
+
+// Cevap, yanıt gönderildikten sonra arka planda üretilir; model yavaşsa bile Meta zamanında 200 alır.
+export const maxDuration = 60;
 
 async function isletmeBul(isletmeNo: string, phoneNumberId?: string): Promise<string | null> {
   if (isletmeNo) {
@@ -46,9 +52,46 @@ function durumlariLogla(durumlar: WhatsAppDurum[]) {
         .map((h) => `code=${h.kod ?? "?"} "${h.baslik}"${h.detay ? ` (${h.detay})` : ""}`)
         .join("; ");
       console.error(`${satir} ${neden || "neden belirtilmedi"}`);
+      const kod = d.hatalar[0]?.kod ?? "bilinmiyor";
+      void uyar(`WhatsApp mesajı teslim edilemedi (kod ${kod})`, d.hatalar[0]?.baslik ?? "", `teslim-${kod}`, 60);
     } else {
       console.log(satir);
     }
+  }
+}
+
+/** Botun cevabını üretip müşteriye gönderir. Her hata yönetici uyarısına ve müşteriye kısa bir nota dönüşür. */
+async function mesajiIsle(payload: WhatsAppMessage) {
+  const gonderen = { numara: payload.to, phoneNumberId: payload.phoneNumberId };
+  try {
+    const isletmeId = await isletmeBul(payload.to, payload.phoneNumberId);
+    if (!isletmeId) {
+      console.error("[Webhook] Numaraya bagli isletme yok:", maskele(payload.to));
+      return;
+    }
+
+    const hak = await botHakki(isletmeId, payload.from);
+    if (hak !== "tamam") {
+      if (hak === "salon") {
+        await uyar("Salonun günlük bot mesaj sınırı doldu", `isletme=${isletmeId}`, `salon-sinir-${isletmeId}`, 360);
+      }
+      if (await uyariGonderilsinMi(isletmeId, payload.from)) {
+        await mesajGonder(payload.from, hak === "salon" ? YOGUN_MESAJI : SINIR_MESAJI, gonderen);
+      }
+      return;
+    }
+
+    const yanitMetni = payload.text
+      ? await botYaniti(payload.from, payload.text, isletmeId)
+      : DESTEKLENMEYEN_YANIT;
+    await mesajGonder(payload.from, yanitMetni, gonderen);
+  } catch (err) {
+    console.error("[Webhook Error]", err);
+    await uyar("WhatsApp mesajı işlenemedi", err instanceof Error ? err.message : String(err), "webhook");
+    // Müşteri cevapsız kalmasın; bu da başarısız olursa yapacak bir şey yok.
+    try {
+      await mesajGonder(payload.from, HATA_MESAJI, gonderen);
+    } catch {}
   }
 }
 
@@ -98,20 +141,11 @@ export async function POST(req: NextRequest) {
 
     if (!payload || (!payload.text && !payload.desteklenmeyen)) return NextResponse.json({ ok: true });
 
-    const isletmeId = await isletmeBul(payload.to, payload.phoneNumberId);
-    if (!isletmeId) {
-      console.error("[Webhook] Numaraya bagli isletme yok:", payload.to);
-      return NextResponse.json({ ok: true });
-    }
+    // Meta aynı mesajı tekrar gönderebilir; ikinci kez işlenmesin.
+    if (!(await ilkKezMi(payload.mesajId))) return NextResponse.json({ ok: true });
 
-    const yanitMetni = payload.text
-      ? await botYaniti(payload.from, payload.text, isletmeId)
-      : DESTEKLENMEYEN_YANIT;
-    await mesajGonder(payload.from, yanitMetni, {
-      numara: payload.to,
-      phoneNumberId: payload.phoneNumberId,
-    });
-
+    const islenecek = payload;
+    after(() => mesajiIsle(islenecek));
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[Webhook Error]", err);

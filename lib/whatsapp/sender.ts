@@ -1,4 +1,5 @@
 import { bsuidMi } from "./kimlik";
+import { uyar } from "@/lib/uyari";
 
 interface Gonderen {
   /** Twilio: işletmenin numarası */
@@ -104,7 +105,14 @@ async function metaPost(phoneNumberId: string | undefined, govde: Record<string,
     body: JSON.stringify({ messaging_product: "whatsapp", ...govde }),
   });
 
-  if (!res.ok) throw new Error(`Meta API gönderim hatası: ${await res.text()}`);
+  if (!res.ok) {
+    const hata = await res.text();
+    // 190: token süresi doldu / geçersiz. Tüm gönderimler durur, hemen haber ver.
+    if (res.status === 401 || /"code"\s*:\s*190/.test(hata)) {
+      await uyar("Meta erişim token'ı geçersiz veya süresi dolmuş", "Vercel'de META_ACCESS_TOKEN değerini yenile.", "meta-token", 60);
+    }
+    throw new Error(`Meta API gönderim hatası: ${hata}`);
+  }
 
   // Teslim bildirimiyle eşleştirebilmek için Meta'nın verdiği mesaj kimliğini logla.
   const json = await res.json().catch(() => null);

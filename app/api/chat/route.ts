@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { botYaniti } from "@/lib/bot";
 import { createServerClient } from "@/lib/supabase/server";
+import { botHakki } from "@/lib/bot/koruma";
+import { istemciIp } from "@/lib/sinirlayici";
+import { uyar } from "@/lib/uyari";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAKS_MESAJ = 1000;
@@ -30,6 +33,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ hata: "Isletme bulunamadi" }, { status: 404 });
     }
 
+    // Her mesaj ücretli bir model çağrısı; IP ve salon başına sınırlanır.
+    const hak = await botHakki(isletme_id, `ip:${istemciIp(req.headers)}`, true);
+    if (hak !== "tamam") {
+      return NextResponse.json(
+        {
+          hata:
+            hak === "salon"
+              ? "Asistan şu an çok yoğun. Lütfen daha sonra tekrar deneyin."
+              : "Çok fazla mesaj gönderdiniz. Lütfen birkaç dakika sonra tekrar deneyin.",
+        },
+        { status: 429 }
+      );
+    }
+
     // Oturum kimliği sadece sunucunun ürettiği biçimde kabul edilir; aksi halde
     // biri bir WhatsApp numarasını oturum diye gönderip o müşterinin
     // geçmişine ve randevularına erişebilirdi.
@@ -42,6 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ yanit, oturum: oturumId });
   } catch (err) {
     console.error("[Chat API Error]", err);
+    await uyar("Web sohbeti hata verdi", err instanceof Error ? err.message : String(err), "chat");
     return NextResponse.json({ hata: "Sunucu hatasi" }, { status: 500 });
   }
 }
