@@ -1,6 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { bosSlotlariGetir } from "@/lib/utils/slot-calculator";
-import { gecerliTarihMi, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
+import { gecerliTarihMi, haftaGunu, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 import { AKTIF_DURUMLAR, cakismaHatasiMi } from "@/lib/randevu-durum";
 import { bildirimiPlanla } from "@/lib/bildirim";
 
@@ -68,23 +68,39 @@ export async function toolCalistir(
     const hizmet = hizmet_id ? await hizmetGetir(hizmet_id) : null;
     // Randevu taşınırken: kendi randevusu meşgul sayılmaz, süre de ondan alınır.
     const tasinan = randevu_id ? await kendiRandevusu(randevu_id) : null;
-    const bosSlotlar = await bosSlotlariGetir(
-      isletmeId,
-      tarih,
-      tasinan?.sureDakika ?? hizmet?.sure_dakika ?? 30,
-      tasinan?.id
-    );
+    const sure = tasinan?.sureDakika ?? hizmet?.sure_dakika ?? 30;
+    const [bosSlotlar, { data: calisma }] = await Promise.all([
+      bosSlotlariGetir(isletmeId, tarih, sure, tasinan?.id),
+      supabase
+        .from("calisma_saatleri")
+        .select("acilis, kapanis, kapali")
+        .eq("isletme_id", isletmeId)
+        .eq("gun", haftaGunu(tarih))
+        .maybeSingle(),
+    ]);
+
+    // Model, listede olmayan bir saati "dolu" sanmasın: nedeni (kapalı gün, kapanış) açıkça verilir.
+    const calismaSaatleri =
+      calisma && !calisma.kapali
+        ? { acilis: calisma.acilis.slice(0, 5), kapanis: calisma.kapanis.slice(0, 5) }
+        : null;
 
     if (bosSlotlar.length === 0) {
       return JSON.stringify({
         musait: false,
-        mesaj: `${tarih} tarihinde müsait saat bulunamadı.`,
+        neden: calismaSaatleri ? "dolu_veya_gecmis" : "salon_kapali",
+        calisma_saatleri: calismaSaatleri,
+        mesaj: calismaSaatleri
+          ? `${tarih} tarihinde müsait saat kalmadı (hepsi dolu ya da geçmiş).`
+          : `Salon ${tarih} tarihinde kapalı.`,
       });
     }
 
     return JSON.stringify({
       musait: true,
       tarih,
+      calisma_saatleri: calismaSaatleri,
+      hizmet_suresi_dakika: sure,
       bos_saatler: bosSlotlar.map((s) => s.baslangicStr),
     });
   }
