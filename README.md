@@ -37,6 +37,7 @@ Mevcut veritabanı için `supabase/migrations/` altındaki dosyaları **sırayla
 | `008_uyarilar.sql` | Süper admin panelinde gösterilen sistem uyarıları (`uyarilar`) |
 | `009_bildirimler.sql` | Berbere yeni randevu bildirimi ayarları |
 | `010_kapali_gunler.sql` | Tatil ve izin günleri (`kapali_gunler`) |
+| `011_musteri_notlari_ve_ozet.sql` | Müşteri notları ve haftalık özet e-postası ayarı |
 
 ### 2. Vercel
 
@@ -86,7 +87,7 @@ WhatsApp, müşteri son 24 saatte yazmadıysa serbest mesaja izin vermez. Hatır
 
 > Merhaba {{1}}, {{2}} randevunuzu hatırlatırız: {{3}} saat {{4}} ({{5}}). Gelemeyecekseniz bu mesaja yazarak iptal edebilirsiniz.
 
-Değişkenler sırasıyla müşteri adı, salon adı, tarih, saat ve hizmettir.
+Değişkenler sırasıyla müşteri adı, salon adı, gün, saat ve hizmettir. Gün, randevuya göre "bugün", "yarın" ya da "27 Kasım Cuma günü" olarak gelir; mesaj "Merhaba Ayşe, BurakHair randevunuzu hatırlatırız: yarın saat 14:00 (Saç Kesimi)." gibi okunur.
 
 - **Meta:** WhatsApp Manager > Message templates altında, "Utility" kategorisinde, Türkçe dilinde oluştur. Şablon adını `WHATSAPP_HATIRLATMA_SABLONU` değerine yaz.
 - **Twilio:** Content Template Builder'da oluşturup WhatsApp onayına gönder. Content SID'yi (`HX...`) `WHATSAPP_HATIRLATMA_SABLONU` değerine yaz.
@@ -134,6 +135,11 @@ Bildirim gönderilemezse işlem etkilenmez; süper admin paneline uyarı düşer
   - Müşteri veri silme talebinde Admin paneli > Müşteriler > "Verileri sil" kullanılır: yazışmalar silinir, randevu kayıtları ad ve numara olmadan (anonim) kalır. İleri tarihli aktif randevusu olan müşteri silinemez.
   - Sohbet kayıtları 30 günden sonra günlük görevle otomatik silinir.
   - **Metin bir hukuk danışmanı tarafından gözden geçirilmelidir.** Özellikle yurt dışı aktarım (WhatsApp/Meta, Vercel, yapay zekâ sağlayıcısı) ve salon ile Duble Studio arasındaki veri işleme sözleşmesi hukuki incelemeye bağlıdır.
+
+### 9. Müşteri notları ve haftalık özet
+
+- **Müşteri notları:** Admin paneli > Müşteriler sayfasında her müşterinin yanındaki "Not ekle" ile salon kendine özel not tutar (ör. "boya alerjisi var"). Not, Randevular sayfasında müşterinin randevu kartında da görünür. Notu yalnızca salon görür; bot görmez ve müşteriye göndermez. Müşterinin verileri silindiğinde notu da silinir.
+- **Haftalık özet e-postası:** Her Pazartesi 08:00'de (İstanbul) salon sahibinin giriş e-postasına son 7 günün özeti gider: toplam, tamamlanan, gelmeyen ve iptal edilen randevu, ciro, en çok yapılan hizmetler, en yoğun gün ve önümüzdeki 7 günün durumu. Hiç randevu yoksa e-posta gönderilmez. Salon sahibi İşletme Bilgileri sayfasından kapatabilir. E-posta altyapısı bildirim e-postasıyla aynıdır (`RESEND_API_KEY`); `vercel.json` içindeki ikinci zamanlanmış görev (`/api/cron/haftalik-ozet`) bunu tetikler. Vercel Hobby planı en fazla iki günlük görev kabul eder, ikisi de kullanılıyor.
 
 ## Koruma önlemleri
 

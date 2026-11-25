@@ -8,6 +8,7 @@ import Link from "next/link";
 import { gecmisleriTamamla } from "@/lib/randevu-durum";
 import { redirect } from "next/navigation";
 import { kimlikGoster } from "@/lib/whatsapp/kimlik";
+import { notlariGetir } from "@/lib/musteri-notlari";
 import SayfaBasligi from "@/components/SayfaBasligi";
 import { ArtiIkon, TakvimIkon } from "@/components/ikonlar";
 import AutoRefresh from "./AutoRefresh";
@@ -78,6 +79,8 @@ export default async function DashboardPage({
     .order("baslangic", { ascending: true });
 
   const randevular = (data ?? []).map((r) => ({ ...r, hizmet: r.hizmetler as unknown as Hizmet | null }));
+
+  const notlar = await notlariGetir(isletme_id, [...new Set(randevular.map((r) => r.musteri_whatsapp))]);
 
   const simdi = Date.now();
   const ciro = randevular
@@ -174,6 +177,11 @@ export default async function DashboardPage({
                           {r.hizmet ? `${r.hizmet.ad} · ${r.hizmet.sure_dakika} dk · ${r.hizmet.fiyat} ₺` : "Hizmet silinmiş"}
                         </p>
                         <p className="text-xs text-silik mt-1">{kimlikGoster(r.musteri_whatsapp)}</p>
+                        {notlar[r.musteri_whatsapp] && (
+                          <p className="text-xs text-turuncu-acik mt-1.5 whitespace-pre-wrap break-words">
+                            Not: {notlar[r.musteri_whatsapp]}
+                          </p>
+                        )}
                       </div>
 
                       <div className="flex flex-col items-start sm:items-end gap-2.5 w-full sm:w-auto">

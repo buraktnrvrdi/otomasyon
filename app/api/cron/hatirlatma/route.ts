@@ -1,10 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { cronYetkiliMi } from "@/lib/cron-yetki";
 import { sablonGonder } from "@/lib/whatsapp/sender";
 import { gonderilebilirMi } from "@/lib/whatsapp/kimlik";
 import { AKTIF_DURUMLAR, gecmisleriTamamla } from "@/lib/randevu-durum";
-import { uzunTarihMetni, yerelSaat } from "@/lib/utils/zaman";
+import { gorelGunMetni, yerelSaat } from "@/lib/utils/zaman";
 import { eskileriTemizle } from "@/lib/sinirlayici";
 import { eskiMesajlariTemizle } from "@/lib/tekrar";
 import { uyar } from "@/lib/uyari";
@@ -14,20 +14,9 @@ const PENCERE_SAAT = 36;
 /** Çok yakın randevuya hatırlatma gitmez (müşteri zaten yeni almıştır). */
 const EN_AZ_DAKIKA = 30;
 
-function yetkili(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  const gelen = req.headers.get("authorization") ?? "";
-  const beklenen = `Bearer ${secret}`;
-  return (
-    !!secret &&
-    gelen.length === beklenen.length &&
-    timingSafeEqual(Buffer.from(gelen), Buffer.from(beklenen))
-  );
-}
-
 // Vercel Cron, CRON_SECRET tanımlıysa isteğe "Authorization: Bearer <secret>" ekler.
 export async function GET(req: NextRequest) {
-  if (!yetkili(req)) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
+  if (!cronYetkiliMi(req)) return NextResponse.json({ hata: "Yetkisiz" }, { status: 401 });
 
   // Kimse paneli açmasa da durumlar güncel kalsın (tüm işletmeler).
   await gecmisleriTamamla();
@@ -98,14 +87,14 @@ export async function GET(req: NextRequest) {
     const baslangic = new Date(r.baslangic);
 
     try {
-      // Şablon değişkenleri: {{1}} ad, {{2}} salon, {{3}} tarih, {{4}} saat, {{5}} hizmet
+      // Şablon değişkenleri: {{1}} ad, {{2}} salon, {{3}} gün ("yarın", "bugün" ya da "27 Kasım Cuma günü"), {{4}} saat, {{5}} hizmet
       await sablonGonder(
         r.musteri_whatsapp,
         sablon,
         [
           r.musteri_ad,
           isletme?.ad ?? "Salon",
-          uzunTarihMetni(baslangic),
+          gorelGunMetni(baslangic),
           yerelSaat(baslangic),
           hizmet?.ad ?? "Randevu",
         ],

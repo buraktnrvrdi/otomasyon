@@ -41,6 +41,10 @@ export async function PATCH(req: NextRequest) {
     whatsapp_no,
   };
 
+  if (body.ozet_eposta_acik !== undefined) {
+    guncelleme.ozet_eposta_acik = body.ozet_eposta_acik === true;
+  }
+
   // Bildirim ayarları yalnızca gönderildiyse güncellenir (migration 009 çalışmadıysa sayfa göndermez).
   if (body.bildirim_eposta_acik !== undefined) {
     guncelleme.bildirim_eposta_acik = body.bildirim_eposta_acik === true;

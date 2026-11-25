@@ -13,6 +13,7 @@ CREATE TABLE isletme (
   bildirim_eposta_acik   BOOLEAN NOT NULL DEFAULT TRUE,
   bildirim_whatsapp      TEXT,
   bildirim_whatsapp_acik BOOLEAN NOT NULL DEFAULT FALSE,
+  ozet_eposta_acik       BOOLEAN NOT NULL DEFAULT TRUE,
   user_id     UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -152,6 +153,18 @@ CREATE TABLE kapali_gunler (
 CREATE INDEX idx_kapali_gunler ON kapali_gunler(isletme_id, bitis_tarih);
 
 -- =============================================
+-- TABLO 11: musteri_notlari (salonun müşteri hakkında tuttuğu notlar)
+-- =============================================
+CREATE TABLE musteri_notlari (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  isletme_id        UUID NOT NULL REFERENCES isletme(id) ON DELETE CASCADE,
+  musteri_whatsapp  TEXT NOT NULL,
+  notu              TEXT NOT NULL,
+  guncellendi_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (isletme_id, musteri_whatsapp)
+);
+
+-- =============================================
 -- ROW LEVEL SECURITY
 -- =============================================
 ALTER TABLE isletme          ENABLE ROW LEVEL SECURITY;
@@ -164,6 +177,7 @@ ALTER TABLE giris_denemeleri ENABLE ROW LEVEL SECURITY;
 ALTER TABLE islenen_mesajlar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uyarilar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kapali_gunler ENABLE ROW LEVEL SECURITY;
+ALTER TABLE musteri_notlari ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_all" ON isletme
   FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -193,6 +207,9 @@ CREATE POLICY "service_role_all" ON uyarilar
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE POLICY "service_role_all" ON kapali_gunler
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON musteri_notlari
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- =============================================
