@@ -33,10 +33,32 @@ export async function PATCH(req: NextRequest) {
 
   const whatsapp_no = numaraNormalize(body.whatsapp_no ?? "") || null;
 
-  const { error } = await supabase
-    .from("isletme")
-    .update({ ad: body.ad, telefon: body.telefon, adres: body.adres, ikon: body.ikon, whatsapp_no })
-    .eq("id", isletme_id);
+  const guncelleme: Record<string, unknown> = {
+    ad: body.ad,
+    telefon: body.telefon,
+    adres: body.adres,
+    ikon: body.ikon,
+    whatsapp_no,
+  };
+
+  // Bildirim ayarları yalnızca gönderildiyse güncellenir (migration 009 çalışmadıysa sayfa göndermez).
+  if (body.bildirim_eposta_acik !== undefined) {
+    guncelleme.bildirim_eposta_acik = body.bildirim_eposta_acik === true;
+  }
+  if (body.bildirim_whatsapp !== undefined) {
+    const bildirimNo = numaraNormalize(body.bildirim_whatsapp ?? "") || null;
+    if (bildirimNo && bildirimNo === whatsapp_no) {
+      return NextResponse.json(
+        { hata: "Bildirim numarası, müşterilerin yazdığı bot numarasından farklı olmalı." },
+        { status: 400 }
+      );
+    }
+    guncelleme.bildirim_whatsapp = bildirimNo;
+    // Numara olmadan WhatsApp bildirimi açılamaz.
+    guncelleme.bildirim_whatsapp_acik = body.bildirim_whatsapp_acik === true && !!bildirimNo;
+  }
+
+  const { error } = await supabase.from("isletme").update(guncelleme).eq("id", isletme_id);
 
   if (error?.code === "23505") {
     return NextResponse.json({ hata: "Bu WhatsApp numarasi baska bir isletmeye kayitli." }, { status: 409 });

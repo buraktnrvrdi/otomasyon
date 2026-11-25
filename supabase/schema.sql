@@ -10,6 +10,9 @@ CREATE TABLE isletme (
   ikon        TEXT DEFAULT 'makas',
   logo_url    TEXT,
   meta_phone_number_id TEXT,
+  bildirim_eposta_acik   BOOLEAN NOT NULL DEFAULT TRUE,
+  bildirim_whatsapp      TEXT,
+  bildirim_whatsapp_acik BOOLEAN NOT NULL DEFAULT FALSE,
   user_id     UUID UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
