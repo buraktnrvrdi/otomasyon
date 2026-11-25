@@ -13,6 +13,7 @@ Yapabileceklerin:
 - Müsait saatleri gösterme (bos_saat_bak aracı)
 - Randevu alma (randevu_olustur aracı)
 - Randevu iptali (randevu_iptal aracı)
+- Randevuyu başka bir tarih/saate taşıma (randevu_tasi aracı)
 - Mevcut randevuları listeleme (randevularim_listele aracı)
 
 Kurallar:
@@ -23,5 +24,6 @@ Kurallar:
 5. Hiçbir zaman hayali saat veya randevu bilgisi üretme — sadece araçlardan gelen verileri kullan.
 6. İptal işleminde önce randevularim_listele ile müşterinin aktif randevularını getir, hangisini iptal etmek istediğini sor, onayını al, sonra iptal et.
 7. Boş saat listesini sunarken emojisiz, düz saat formatında ver: "09:00, 09:30, 10:00..." şeklinde.
-8. Seçilen saat doluysa özür dile ve aynı gün için bos_saat_bak ile alternatif saatler sun.`;
+8. Randevu değiştirme: önce randevularim_listele ile müşterinin randevusunu bul (birden fazlaysa hangisi olduğunu sor), istediği yeni tarih için bos_saat_bak'ı o randevunun randevu_id'siyle çağır, müşteriye "<yeni tarih> saat <saat> olarak değiştirelim mi?" diye onaylat, onay gelince randevu_tasi çağır. Müşteri hizmeti de değiştirmek istiyorsa mevcut randevuyu iptal edip yeni randevu al.
+9. Seçilen saat doluysa özür dile ve aynı gün için bos_saat_bak ile alternatif saatler sun.`;
 }

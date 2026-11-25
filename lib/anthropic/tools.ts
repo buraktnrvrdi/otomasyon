@@ -19,6 +19,11 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
           type: "string",
           description: "Hizmetin UUID'si (opsiyonel)",
         },
+        randevu_id: {
+          type: "string",
+          description:
+            "Mevcut bir randevuyu TAŞIRKEN o randevunun UUID'si. Verilirse randevunun kendi süresi kullanılır ve kendi saati meşgul sayılmaz.",
+        },
       },
       required: ["tarih"],
     },
@@ -86,6 +91,32 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ["randevu_id"],
+    },
+  },
+  {
+    name: "randevu_tasi",
+    description: `
+      Müşterinin mevcut randevusunu başka bir tarih/saate taşır (hizmet aynı kalır).
+      Önce randevularim_listele ile randevuyu belirle, bos_saat_bak'ı randevu_id vererek
+      çağırıp boş saati bul, müşteriye yeni tarih/saati onaylat, sonra bu aracı çağır.
+    `,
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        randevu_id: {
+          type: "string",
+          description: "Taşınacak randevunun UUID'si",
+        },
+        tarih: {
+          type: "string",
+          description: "Yeni tarih (YYYY-MM-DD)",
+        },
+        saat: {
+          type: "string",
+          description: "Yeni saat, bos_saat_bak'tan dönen saatlerden biri (HH:mm, salon saati)",
+        },
+      },
+      required: ["randevu_id", "tarih", "saat"],
     },
   },
   {

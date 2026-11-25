@@ -13,10 +13,33 @@ interface Isletme {
   ikon: string;
   whatsapp_no: string;
   logo_url: string | null;
+  bildirim_eposta_acik: boolean;
+  bildirim_whatsapp: string;
+  bildirim_whatsapp_acik: boolean;
+}
+
+function Anahtar({ acik, onDegisti, etiket }: { acik: boolean; onDegisti: (v: boolean) => void; etiket: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={acik}
+      aria-label={etiket}
+      onClick={() => onDegisti(!acik)}
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${acik ? "bg-turuncu" : "bg-yuzey-3"}`}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${acik ? "translate-x-5" : ""}`} />
+    </button>
+  );
 }
 
 export default function IsletmePage() {
-  const [form, setForm] = useState<Isletme>({ ad: "", telefon: "", adres: "", ikon: "makas", whatsapp_no: "", logo_url: null });
+  const [form, setForm] = useState<Isletme>({
+    ad: "", telefon: "", adres: "", ikon: "makas", whatsapp_no: "", logo_url: null,
+    bildirim_eposta_acik: true, bildirim_whatsapp: "", bildirim_whatsapp_acik: false,
+  });
+  // Bildirim kolonları yoksa (migration 009 çalıştırılmadıysa) bölüm gizlenir ve gönderilmez.
+  const [bildirimHazir, setBildirimHazir] = useState(true);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
@@ -34,7 +57,11 @@ export default function IsletmePage() {
           ikon: ikonAnahtari(d.ikon),
           whatsapp_no: d.whatsapp_no ?? "",
           logo_url: d.logo_url ?? null,
+          bildirim_eposta_acik: d.bildirim_eposta_acik !== false,
+          bildirim_whatsapp: d.bildirim_whatsapp ?? "",
+          bildirim_whatsapp_acik: d.bildirim_whatsapp_acik === true,
         });
+        setBildirimHazir("bildirim_eposta_acik" in d);
         setYukleniyor(false);
       })
       .catch(() => { setHata("Veriler yüklenemedi."); setYukleniyor(false); });
@@ -46,7 +73,11 @@ export default function IsletmePage() {
     const r = await fetch("/api/admin/isletme", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify(
+        bildirimHazir
+          ? form
+          : { ad: form.ad, telefon: form.telefon, adres: form.adres, ikon: form.ikon, whatsapp_no: form.whatsapp_no }
+      ),
     });
     const json = await r.json().catch(() => ({}));
     setKaydediliyor(false);
@@ -132,6 +163,56 @@ export default function IsletmePage() {
               onChange={(e) => setForm({ ...form, adres: e.target.value })}
             />
           </div>
+
+          {bildirimHazir && (
+            <div className="border-t border-cizgi pt-6 space-y-5">
+              <div>
+                <p className="etiket">Yeni randevu bildirimi</p>
+                <p className="text-xs text-silik">
+                  Müşteri WhatsApp'tan randevu aldığında, iptal ettiğinde ya da değiştirdiğinde sana haber verilir.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-sm">E-posta ile bildir</p>
+                  <p className="text-xs text-silik">Giriş yaptığın e-posta adresine gönderilir.</p>
+                </div>
+                <Anahtar
+                  acik={form.bildirim_eposta_acik}
+                  onDegisti={(v) => setForm({ ...form, bildirim_eposta_acik: v })}
+                  etiket="E-posta ile bildir"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-semibold text-sm">WhatsApp ile bildir</p>
+                    <p className="text-xs text-silik">Telefonuna WhatsApp mesajı düşer.</p>
+                  </div>
+                  <Anahtar
+                    acik={form.bildirim_whatsapp_acik}
+                    onDegisti={(v) => setForm({ ...form, bildirim_whatsapp_acik: v })}
+                    etiket="WhatsApp ile bildir"
+                  />
+                </div>
+                <div>
+                  <label className="etiket" htmlFor="bildirim-wa">Bildirimin geleceği kişisel numaran</label>
+                  <input
+                    id="bildirim-wa"
+                    className="girdi"
+                    placeholder="+905551234567"
+                    value={form.bildirim_whatsapp}
+                    onChange={(e) => setForm({ ...form, bildirim_whatsapp: e.target.value })}
+                  />
+                  <p className="text-xs text-silik mt-1.5">
+                    Müşterilerin yazdığı bot numarasından farklı, kendi numaran olmalı.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-4 pt-1">
             <button type="submit" disabled={kaydediliyor} className="btn btn-ana">

@@ -15,7 +15,9 @@ const MIN_ONCEDEN_DAKIKA = 15;
 export async function bosSlotlariGetir(
   isletmeId: string,
   tarih: string,
-  hizmetSureDakika = 30
+  hizmetSureDakika = 30,
+  /** Taşınan randevunun kendisi meşgul sayılmasın (bitişik saate kaydırabilsin). */
+  haricRandevuId?: string
 ): Promise<BosSlot[]> {
   const supabase = await createServerClient();
 
@@ -36,13 +38,15 @@ export async function bosSlotlariGetir(
   const gunBitis = yerelAn(gunEkle(tarih, 1), 0);
 
   // Bu güne taşan tüm randevular (önceki günden sarkanlar dahil)
-  const { data: mevcutRandevular } = await supabase
+  let sorgu = supabase
     .from("randevular")
     .select("baslangic, bitis")
     .eq("isletme_id", isletmeId)
     .lt("baslangic", gunBitis.toISOString())
     .gt("bitis", gunBaslangic.toISOString())
     .in("durum", AKTIF_DURUMLAR);
+  if (haricRandevuId) sorgu = sorgu.neq("id", haricRandevuId);
+  const { data: mevcutRandevular } = await sorgu;
 
   const dk = (iso: string) => (new Date(iso).getTime() - gunBaslangic.getTime()) / 60_000;
   const mesgul = (mevcutRandevular ?? []).map((r) => ({ bas: dk(r.baslangic), bit: dk(r.bitis) }));

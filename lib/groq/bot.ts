@@ -21,6 +21,10 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
         properties: {
           tarih: { type: "string", description: "YYYY-MM-DD formatında tarih" },
           hizmet_id: { type: "string", description: "Hizmetin UUID'si (opsiyonel)" },
+          randevu_id: {
+            type: "string",
+            description: "Mevcut randevuyu TAŞIRKEN o randevunun UUID'si (kendi saati meşgul sayılmaz)",
+          },
         },
         required: ["tarih"],
       },
@@ -56,6 +60,23 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
           iptal_nedeni: { type: "string", description: "İptal sebebi (opsiyonel)" },
         },
         required: ["randevu_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "randevu_tasi",
+      description:
+        "Müşterinin mevcut randevusunu başka tarih/saate taşır. Önce bos_saat_bak'ı randevu_id vererek çağır ve müşteriye yeni saati onaylat.",
+      parameters: {
+        type: "object",
+        properties: {
+          randevu_id: { type: "string", description: "Taşınacak randevu UUID'si" },
+          tarih: { type: "string", description: "Yeni tarih (YYYY-MM-DD)" },
+          saat: { type: "string", description: "Yeni saat, bos_saat_bak'tan dönen saatlerden biri (HH:mm)" },
+        },
+        required: ["randevu_id", "tarih", "saat"],
       },
     },
   },

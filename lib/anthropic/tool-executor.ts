@@ -2,6 +2,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { bosSlotlariGetir } from "@/lib/utils/slot-calculator";
 import { gecerliTarihMi, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
 import { AKTIF_DURUMLAR, cakismaHatasiMi } from "@/lib/randevu-durum";
+import { bildirimiPlanla } from "@/lib/bildirim";
 
 /**
  * Müşteri kimliği (musteriNo) her zaman sunucudan gelir; modelin ürettiği
@@ -28,15 +29,51 @@ export async function toolCalistir(
     return data;
   };
 
+  /** Müşterinin kendi, henüz başlamamış aktif randevusu. Başkasının randevusu asla dönmez. */
+  const kendiRandevusu = async (randevuId: unknown) => {
+    if (typeof randevuId !== "string") return null;
+    const { data } = await supabase
+      .from("randevular")
+      .select("id, musteri_ad, baslangic, bitis, hizmetler ( ad )")
+      .eq("id", randevuId)
+      .eq("isletme_id", isletmeId)
+      .eq("musteri_whatsapp", musteriNo)
+      .in("durum", AKTIF_DURUMLAR)
+      .gt("baslangic", new Date().toISOString())
+      .maybeSingle();
+    if (!data) return null;
+    const hizmet = data.hizmetler as unknown as { ad: string } | null;
+    const baslangic = new Date(data.baslangic);
+    const bitis = new Date(data.bitis);
+    return {
+      id: data.id as string,
+      musteriAd: data.musteri_ad as string,
+      hizmetAdi: hizmet?.ad ?? "Randevu",
+      baslangic,
+      sureDakika: Math.round((bitis.getTime() - baslangic.getTime()) / 60_000),
+    };
+  };
+
   if (toolName === "bos_saat_bak") {
-    const { tarih, hizmet_id } = toolInput as { tarih: string; hizmet_id?: string };
+    const { tarih, hizmet_id, randevu_id } = toolInput as {
+      tarih: string;
+      hizmet_id?: string;
+      randevu_id?: string;
+    };
 
     if (!gecerliTarihMi(tarih)) {
       return JSON.stringify({ musait: false, hata: "Tarih YYYY-MM-DD olmali." });
     }
 
     const hizmet = hizmet_id ? await hizmetGetir(hizmet_id) : null;
-    const bosSlotlar = await bosSlotlariGetir(isletmeId, tarih, hizmet?.sure_dakika ?? 30);
+    // Randevu taşınırken: kendi randevusu meşgul sayılmaz, süre de ondan alınır.
+    const tasinan = randevu_id ? await kendiRandevusu(randevu_id) : null;
+    const bosSlotlar = await bosSlotlariGetir(
+      isletmeId,
+      tarih,
+      tasinan?.sureDakika ?? hizmet?.sure_dakika ?? 30,
+      tasinan?.id
+    );
 
     if (bosSlotlar.length === 0) {
       return JSON.stringify({
@@ -109,6 +146,13 @@ export async function toolCalistir(
       return JSON.stringify({ basari: false, hata: "Randevu kaydedilemedi." });
     }
 
+    bildirimiPlanla(isletmeId, {
+      tur: "yeni",
+      musteri: String(musteri_ad ?? ""),
+      hizmet: hizmet.ad,
+      baslangic: baslaD,
+    });
+
     return JSON.stringify({
       basari: true,
       randevu_id: yeniRandevu.id,
@@ -124,6 +168,8 @@ export async function toolCalistir(
       randevu_id: string;
       iptal_nedeni?: string;
     };
+
+    const iptalEdilecek = await kendiRandevusu(randevu_id);
 
     const { data, error } = await supabase
       .from("randevular")
@@ -142,7 +188,88 @@ export async function toolCalistir(
       return JSON.stringify({ basari: false, hata: "Size ait aktif bir randevu bulunamadı." });
     }
 
+    if (iptalEdilecek) {
+      bildirimiPlanla(isletmeId, {
+        tur: "iptal",
+        musteri: iptalEdilecek.musteriAd,
+        hizmet: iptalEdilecek.hizmetAdi,
+        baslangic: iptalEdilecek.baslangic,
+      });
+    }
+
     return JSON.stringify({ basari: true, randevu_id });
+  }
+
+  if (toolName === "randevu_tasi") {
+    const { randevu_id, tarih, saat } = toolInput as {
+      randevu_id: string;
+      tarih: string;
+      saat: string;
+    };
+
+    if (!gecerliTarihMi(tarih) || saatiDakikaya(saat) === null) {
+      return JSON.stringify({ basari: false, hata: "Tarih YYYY-MM-DD, saat HH:mm olmalı." });
+    }
+
+    const mevcut = await kendiRandevusu(randevu_id);
+    if (!mevcut) {
+      return JSON.stringify({
+        basari: false,
+        hata: "Size ait, henüz başlamamış aktif bir randevu bulunamadı.",
+      });
+    }
+
+    // Aynı hizmet süresiyle, çalışma saatlerine ve diğer randevulara uyan boş bir slot aranır.
+    const slotlar = await bosSlotlariGetir(isletmeId, tarih, mevcut.sureDakika, mevcut.id);
+    const slot = slotlar.find((s) => saatiDakikaya(s.baslangicStr) === saatiDakikaya(saat));
+    if (!slot) {
+      return JSON.stringify({
+        basari: false,
+        hata: "Bu saat müsait değil. Lütfen bos_saat_bak ile (randevu_id vererek) boş bir saat seçin.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("randevular")
+      .update({
+        baslangic: slot.baslangic.toISOString(),
+        bitis: slot.bitis.toISOString(),
+        // Yeni saat için hatırlatma yeniden gönderilebilsin.
+        hatirlatma_gonderildi_at: null,
+      })
+      .eq("id", mevcut.id)
+      .eq("isletme_id", isletmeId)
+      .eq("musteri_whatsapp", musteriNo)
+      .in("durum", AKTIF_DURUMLAR)
+      .select("id");
+
+    if (cakismaHatasiMi(error)) {
+      return JSON.stringify({
+        basari: false,
+        hata: "Bu saat az önce başkası tarafından alındı. Lütfen başka bir saat seçin.",
+      });
+    }
+    if (error || !data?.length) {
+      return JSON.stringify({ basari: false, hata: "Randevu değiştirilemedi." });
+    }
+
+    bildirimiPlanla(isletmeId, {
+      tur: "tasindi",
+      musteri: mevcut.musteriAd,
+      hizmet: mevcut.hizmetAdi,
+      baslangic: slot.baslangic,
+      eskiBaslangic: mevcut.baslangic,
+    });
+
+    return JSON.stringify({
+      basari: true,
+      randevu_id: mevcut.id,
+      hizmet: mevcut.hizmetAdi,
+      eski_tarih: yerelTarih(mevcut.baslangic),
+      eski_saat: yerelSaat(mevcut.baslangic),
+      tarih: yerelTarih(slot.baslangic),
+      saat: yerelSaat(slot.baslangic),
+    });
   }
 
   if (toolName === "hizmetleri_listele") {

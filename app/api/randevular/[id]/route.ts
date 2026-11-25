@@ -60,6 +60,8 @@ export async function PATCH(
         hizmet_id: hizmet.id,
         baslangic: baslangic.toISOString(),
         bitis: bitis.toISOString(),
+        // Yeni saat için hatırlatma yeniden gönderilebilsin.
+        hatirlatma_gonderildi_at: null,
       })
       .eq("id", id)
       .eq("isletme_id", isletme_id)

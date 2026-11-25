@@ -35,6 +35,7 @@ Mevcut veritabanı için `supabase/migrations/` altındaki dosyaları **sırayla
 | `006_salon_logo.sql` | Salon logosu kolonu, simge varsayılanı ve herkese açık `logolar` depolama alanı |
 | `007_mesaj_tekrar_kontrolu.sql` | WhatsApp mesaj tekrar kontrolü (`islenen_mesajlar`) |
 | `008_uyarilar.sql` | Süper admin panelinde gösterilen sistem uyarıları (`uyarilar`) |
+| `009_bildirimler.sql` | Berbere yeni randevu bildirimi ayarları |
 
 ### 2. Vercel
 
@@ -109,10 +110,24 @@ Paneli açmadığın zamanlarda da haberdar olmak istersen isteğe bağlı bir d
 3. İsteğe bağlı: bağlantının farklı cihazda da açılması için **Authentication > Email Templates > Reset Password** şablonunda bağlantıyı şu şekilde değiştir:
    `{{ .SiteURL }}/api/admin/sifre-callback?token_hash={{ .TokenHash }}&type=recovery`
 
+### 7. Berbere randevu bildirimi
+
+Müşteri bot üzerinden randevu aldığında, iptal ettiğinde ya da değiştirdiğinde salon sahibine haber gider. Salon sahibi bunu Admin paneli > İşletme Bilgileri > "Yeni randevu bildirimi" bölümünden açıp kapatır.
+
+- **E-posta (varsayılan açık):** Salon sahibinin giriş e-postasına gider. [Resend](https://resend.com) kullanılır: `RESEND_API_KEY` gir. Gönderen adresi için kendi alan adını Resend'de doğrulayıp `BILDIRIM_EPOSTA_GONDEREN` değerini ayarla (ör. `Randevu Botu <bildirim@alanadin.com>`). Alan adı doğrulanmadan Resend yalnızca kendi hesabının e-postasına gönderebilir; satışta mutlaka doğrula.
+- **WhatsApp (isteğe bağlı):** Salon sahibi kişisel numarasını girer. Müşteri yazmadığı sürece WhatsApp serbest mesaja izin vermediği için **onaylı bir şablon** gerekir. Meta'da "Utility" kategorisinde, Türkçe dilinde şu şablonu oluştur ve adını `WHATSAPP_BILDIRIM_SABLONU` değerine yaz:
+
+  > Randevu bildirimi: {{1}}. Müşteri: {{2}}, hizmet: {{3}}, zaman: {{4}}. Detaylar panelde.
+
+  Değişkenler sırasıyla olay ("Yeni randevu", "Randevu iptal edildi", "Randevu değiştirildi"), müşteri adı, hizmet ve zamandır.
+
+Bildirim gönderilemezse işlem etkilenmez; süper admin paneline uyarı düşer. Hiçbir kanal ayarlı değilse bildirim sessizce atlanır.
+
 ## Koruma önlemleri
 
 - **Hız sınırı:** Müşteri başına 10 dakikada 20, günde 120 bot mesajı; web sohbetinde IP başına 10 dakikada 30; salon başına günde 1500 (`BOT_SALON_GUNLUK_SINIR` ile değişir). Sınır aşılınca müşteriye kısa bir uyarı gider ve model çağrılmaz. Salon girişinde 15 dakikada 5 hatalı denemeden sonra kilitlenir.
 - **Tekrar kontrolü:** Meta aynı mesajı tekrar gönderirse ikinci kez işlenmez. Cevap arka planda üretildiği için Meta zamanında 200 alır.
+- **Randevu değiştirme:** Müşteri "yarınkini cumaya al" dediğinde bot randevuyu aynı hizmet süresiyle yeni saate taşır; çakışma kilidi burada da geçerlidir ve hatırlatma yeni saat için yeniden gönderilir.
 - **Müşteri cevapsız kalmaz:** Model ya da WhatsApp hatasında müşteriye "şu an yanıt veremiyorum" mesajı gider, yöneticiye uyarı düşer.
 
 ## Önemli davranışlar
