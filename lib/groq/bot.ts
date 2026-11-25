@@ -5,6 +5,9 @@ import { sistemPrompt } from "@/lib/bot/prompt";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MAKS_TUR = 8;
+// Groq ücretsiz katmanında bu modelin dakikalık ÇIKTI sınırı 1000 token; istenen max_tokens
+// bunu aşarsa istek hiç çalışmadan 429 ile reddedilir. WhatsApp cevapları kısa olduğundan 800 yeter.
+const MAKS_CIKTI_TOKEN = Number(process.env.GROQ_MAX_TOKENS) || 800;
 const SAGLAYICI = "groq";
 
 type Mesaj = Groq.Chat.ChatCompletionMessageParam;
@@ -109,7 +112,7 @@ export async function groqBotYaniti(musteriNo: string, gelenMesaj: string, islet
   for (let tur = 0; tur < MAKS_TUR; tur++) {
     const yanit = await groq.chat.completions.create({
       model: process.env.GROQ_MODEL || "qwen/qwen3.8-27b",
-      max_tokens: 1024,
+      max_tokens: MAKS_CIKTI_TOKEN,
       messages: [{ role: "system", content: sistemPrompt(isletme) }, ...mesajlar],
       tools: TOOLS,
       tool_choice: "auto",
