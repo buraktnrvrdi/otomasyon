@@ -36,6 +36,7 @@ Mevcut veritabanı için `supabase/migrations/` altındaki dosyaları **sırayla
 | `007_mesaj_tekrar_kontrolu.sql` | WhatsApp mesaj tekrar kontrolü (`islenen_mesajlar`) |
 | `008_uyarilar.sql` | Süper admin panelinde gösterilen sistem uyarıları (`uyarilar`) |
 | `009_bildirimler.sql` | Berbere yeni randevu bildirimi ayarları |
+| `010_kapali_gunler.sql` | Tatil ve izin günleri (`kapali_gunler`) |
 
 ### 2. Vercel
 
@@ -122,6 +123,17 @@ Müşteri bot üzerinden randevu aldığında, iptal ettiğinde ya da değiştir
   Değişkenler sırasıyla olay ("Yeni randevu", "Randevu iptal edildi", "Randevu değiştirildi"), müşteri adı, hizmet ve zamandır.
 
 Bildirim gönderilemezse işlem etkilenmez; süper admin paneline uyarı düşer. Hiçbir kanal ayarlı değilse bildirim sessizce atlanır.
+
+### 8. Tatil günleri, salon bilgisi ve KVKK
+
+- **Tatil / izin günleri:** Admin paneli > Tatil Günleri. Tek gün, tarih aralığı ya da her gün belirli saatler (öğle arası) kapatılabilir. Bot bu tarihlerde randevu vermez ve nedenini müşteriye söyler. Daha önce alınmış randevular otomatik iptal edilmez; panel kaç randevunun etkilendiğini uyarır. Bir kayıt en fazla 1 yıllık aralığı kapsar; yıl boyu öğle arası için 1 yıllık bir kayıt eklenebilir.
+- **Bota salon bilgisi:** Bot adres, telefon, çalışma saatleri ve yaklaşan tatilleri `salon_bilgisi` aracıyla İşletme Bilgileri'nden okur. Alan boşsa uydurmaz, "elimde yok" der. Adres ve telefonu doldurmayı unutma.
+- **KVKK:**
+  - Her salonun herkese açık aydınlatma sayfası `https://<alan-adin>/gizlilik/<salon-id>` adresindedir (bağlantı İşletme Bilgileri sayfasında da görünür). Veri sorumlusu olarak salonun adı, telefonu ve adresi otomatik yazılır.
+  - Bot, yeni bir müşteriye ilk cevabında kısa bir bilgilendirme ve bu sayfanın bağlantısını ekler. Bağlantı için Vercel'in `VERCEL_PROJECT_PRODUCTION_URL` değeri ya da `NEXT_PUBLIC_SITE_URL` kullanılır.
+  - Müşteri veri silme talebinde Admin paneli > Müşteriler > "Verileri sil" kullanılır: yazışmalar silinir, randevu kayıtları ad ve numara olmadan (anonim) kalır. İleri tarihli aktif randevusu olan müşteri silinemez.
+  - Sohbet kayıtları 30 günden sonra günlük görevle otomatik silinir.
+  - **Metin bir hukuk danışmanı tarafından gözden geçirilmelidir.** Özellikle yurt dışı aktarım (WhatsApp/Meta, Vercel, yapay zekâ sağlayıcısı) ve salon ile Duble Studio arasındaki veri işleme sözleşmesi hukuki incelemeye bağlıdır.
 
 ## Koruma önlemleri
 

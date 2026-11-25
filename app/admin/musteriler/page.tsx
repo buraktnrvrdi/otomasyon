@@ -7,6 +7,8 @@ import { tarihSaatMetni } from "@/lib/utils/zaman";
 import { redirect } from "next/navigation";
 import { kimlikGoster } from "@/lib/whatsapp/kimlik";
 import SayfaBasligi from "@/components/SayfaBasligi";
+import MusteriSilButonu from "./MusteriSilButonu";
+import { SILINMIS_ON_EK } from "@/lib/kvkk";
 
 interface MusteriSatir {
   musteri_ad: string;
@@ -69,6 +71,7 @@ export default async function MusterilerPage() {
                   <th>Numara</th>
                   <th>Randevu</th>
                   <th>Son Randevu</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -88,6 +91,11 @@ export default async function MusterilerPage() {
                     </td>
                     <td className="text-soluk text-xs whitespace-nowrap tabular-nums">
                       {tarihSaatMetni(new Date(m.son_randevu))}
+                    </td>
+                    <td>
+                      {!m.musteri_whatsapp.startsWith(SILINMIS_ON_EK) && !m.musteri_whatsapp.startsWith("web-") && (
+                        <MusteriSilButonu musteriWhatsapp={m.musteri_whatsapp} ad={m.musteri_ad} />
+                      )}
                     </td>
                   </tr>
                 ))}

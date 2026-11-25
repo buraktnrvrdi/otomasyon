@@ -36,6 +36,14 @@ export async function GET(req: NextRequest) {
   await Promise.allSettled([
     eskileriTemizle(),
     eskiMesajlariTemizle(),
+    // KVKK: sohbet kayıtları 30 günden fazla saklanmaz.
+    (async () => {
+      const db = await createServerClient();
+      await db
+        .from("konusmalar")
+        .delete()
+        .lt("guncellendi_at", new Date(Date.now() - 30 * 24 * 3600_000).toISOString());
+    })(),
     // Okunmuş uyarılar 30 gün sonra silinir.
     (async () => {
       const db = await createServerClient();

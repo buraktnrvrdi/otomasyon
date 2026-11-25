@@ -24,5 +24,6 @@ export function gonderilebilirMi(kimlik: string): boolean {
 export function kimlikGoster(kimlik: string): string {
   if (bsuidMi(kimlik)) return "WhatsApp kullanıcısı (numara gizli)";
   if (kimlik.startsWith("web-")) return "Web test sohbeti";
+  if (kimlik.startsWith("silindi-")) return "Silinmiş kayıt";
   return kimlik;
 }
