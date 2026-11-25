@@ -1,5 +1,6 @@
 import { createServerClient } from "@/lib/supabase/server";
-import { gunEkle, haftaGunu, saatiDakikaya, yerelAn } from "./zaman";
+import { gunEkle, saatiDakikaya, yerelAn } from "./zaman";
+import { gunBilgisiGetir } from "@/lib/gun-bilgisi";
 import { AKTIF_DURUMLAR } from "@/lib/randevu-durum";
 
 export interface BosSlot {
@@ -21,17 +22,12 @@ export async function bosSlotlariGetir(
 ): Promise<BosSlot[]> {
   const supabase = await createServerClient();
 
-  const { data: calisma } = await supabase
-    .from("calisma_saatleri")
-    .select("acilis, kapanis, kapali")
-    .eq("isletme_id", isletmeId)
-    .eq("gun", haftaGunu(tarih))
-    .maybeSingle();
+  // Haftalık saatler + tatil/izin: kapalı gün ya da tüm gün tatil varsa boş saat yoktur.
+  const gun = await gunBilgisiGetir(isletmeId, tarih);
+  if (!gun.calisma || gun.tatil) return [];
 
-  if (!calisma || calisma.kapali) return [];
-
-  const acilis = saatiDakikaya(calisma.acilis.slice(0, 5));
-  const kapanis = saatiDakikaya(calisma.kapanis.slice(0, 5));
+  const acilis = saatiDakikaya(gun.calisma.acilis);
+  const kapanis = saatiDakikaya(gun.calisma.kapanis);
   if (acilis === null || kapanis === null) return [];
 
   const gunBaslangic = yerelAn(tarih, 0);
@@ -49,7 +45,11 @@ export async function bosSlotlariGetir(
   const { data: mevcutRandevular } = await sorgu;
 
   const dk = (iso: string) => (new Date(iso).getTime() - gunBaslangic.getTime()) / 60_000;
-  const mesgul = (mevcutRandevular ?? []).map((r) => ({ bas: dk(r.baslangic), bit: dk(r.bitis) }));
+  const mesgul = [
+    ...(mevcutRandevular ?? []).map((r) => ({ bas: dk(r.baslangic), bit: dk(r.bitis) })),
+    // Belirli saatlerdeki izinler (öğle arası vb.) de dolu sayılır.
+    ...gun.molalar.map((m) => ({ bas: m.bas, bit: m.bit })),
+  ];
 
   const enErken = Date.now() + MIN_ONCEDEN_DAKIKA * 60_000;
   const bosSlotlar: BosSlot[] = [];

@@ -94,6 +94,15 @@ const TOOLS: Groq.Chat.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "salon_bilgisi",
+      description:
+        "Salonun adresini, telefonunu, haftalık çalışma saatlerini ve yaklaşan tatil günlerini verir. Müşteri adres, telefon, açılış/kapanış saati ya da tatil sorduğunda çağır.",
+      parameters: { type: "object", properties: {}, required: [] },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "randevularim_listele",
       description: "Müşterinin aktif randevularını listeler.",
       parameters: { type: "object", properties: {}, required: [] },

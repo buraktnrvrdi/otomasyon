@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import { bosSlotlariGetir } from "@/lib/utils/slot-calculator";
-import { gecerliTarihMi, haftaGunu, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
+import { gecerliTarihMi, gunEkle, saatiDakikaya, yerelSaat, yerelTarih } from "@/lib/utils/zaman";
+import { gunBilgisiGetir } from "@/lib/gun-bilgisi";
 import { AKTIF_DURUMLAR, cakismaHatasiMi } from "@/lib/randevu-durum";
 import { bildirimiPlanla } from "@/lib/bildirim";
 
@@ -69,37 +70,39 @@ export async function toolCalistir(
     // Randevu taşınırken: kendi randevusu meşgul sayılmaz, süre de ondan alınır.
     const tasinan = randevu_id ? await kendiRandevusu(randevu_id) : null;
     const sure = tasinan?.sureDakika ?? hizmet?.sure_dakika ?? 30;
-    const [bosSlotlar, { data: calisma }] = await Promise.all([
+    const [bosSlotlar, gun] = await Promise.all([
       bosSlotlariGetir(isletmeId, tarih, sure, tasinan?.id),
-      supabase
-        .from("calisma_saatleri")
-        .select("acilis, kapanis, kapali")
-        .eq("isletme_id", isletmeId)
-        .eq("gun", haftaGunu(tarih))
-        .maybeSingle(),
+      gunBilgisiGetir(isletmeId, tarih),
     ]);
 
-    // Model, listede olmayan bir saati "dolu" sanmasın: nedeni (kapalı gün, kapanış) açıkça verilir.
-    const calismaSaatleri =
-      calisma && !calisma.kapali
-        ? { acilis: calisma.acilis.slice(0, 5), kapanis: calisma.kapanis.slice(0, 5) }
-        : null;
+    // Model, listede olmayan bir saati "dolu" sanmasın: nedeni (tatil, kapalı gün, kapanış) açıkça verilir.
+    const molalar = gun.molalar.map((m) => ({
+      baslangic: `${String(Math.floor(m.bas / 60)).padStart(2, "0")}:${String(m.bas % 60).padStart(2, "0")}`,
+      bitis: `${String(Math.floor(m.bit / 60)).padStart(2, "0")}:${String(m.bit % 60).padStart(2, "0")}`,
+      aciklama: m.aciklama,
+    }));
 
     if (bosSlotlar.length === 0) {
+      const neden = gun.tatil ? "tatil" : !gun.calisma ? "salon_kapali" : "dolu_veya_gecmis";
       return JSON.stringify({
         musait: false,
-        neden: calismaSaatleri ? "dolu_veya_gecmis" : "salon_kapali",
-        calisma_saatleri: calismaSaatleri,
-        mesaj: calismaSaatleri
-          ? `${tarih} tarihinde müsait saat kalmadı (hepsi dolu ya da geçmiş).`
-          : `Salon ${tarih} tarihinde kapalı.`,
+        neden,
+        calisma_saatleri: gun.calisma,
+        mola_saatleri: molalar,
+        mesaj:
+          neden === "tatil"
+            ? `Salon ${tarih} tarihinde tatilde/izinde${gun.tatil?.aciklama ? ` (${gun.tatil.aciklama})` : ""}.`
+            : neden === "salon_kapali"
+              ? `Salon ${tarih} tarihinde kapalı.`
+              : `${tarih} tarihinde müsait saat kalmadı (hepsi dolu ya da geçmiş).`,
       });
     }
 
     return JSON.stringify({
       musait: true,
       tarih,
-      calisma_saatleri: calismaSaatleri,
+      calisma_saatleri: gun.calisma,
+      mola_saatleri: molalar,
       hizmet_suresi_dakika: sure,
       bos_saatler: bosSlotlar.map((s) => s.baslangicStr),
     });
@@ -285,6 +288,48 @@ export async function toolCalistir(
       eski_saat: yerelSaat(mevcut.baslangic),
       tarih: yerelTarih(slot.baslangic),
       saat: yerelSaat(slot.baslangic),
+    });
+  }
+
+  if (toolName === "salon_bilgisi") {
+    const bugun = yerelTarih();
+    const [{ data: isletme }, { data: saatler }, { data: tatiller }] = await Promise.all([
+      supabase.from("isletme").select("ad, telefon, adres").eq("id", isletmeId).maybeSingle(),
+      supabase.from("calisma_saatleri").select("gun, acilis, kapanis, kapali").eq("isletme_id", isletmeId),
+      supabase
+        .from("kapali_gunler")
+        .select("baslangic_tarih, bitis_tarih, baslangic_saat, bitis_saat, aciklama")
+        .eq("isletme_id", isletmeId)
+        .gte("bitis_tarih", bugun)
+        .lte("baslangic_tarih", gunEkle(bugun, 60))
+        .order("baslangic_tarih", { ascending: true })
+        .limit(10),
+    ]);
+
+    const GUNLER = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+    const haftalik = [1, 2, 3, 4, 5, 6, 0].map((gun) => {
+      const s = (saatler ?? []).find((x) => x.gun === gun);
+      return {
+        gun: GUNLER[gun],
+        saat: s && !s.kapali ? `${String(s.acilis).slice(0, 5)}-${String(s.kapanis).slice(0, 5)}` : "kapalı",
+      };
+    });
+
+    return JSON.stringify({
+      basari: true,
+      ad: isletme?.ad ?? null,
+      // Boş alanlar "bilgi girilmemiş" demektir; model bunları uydurmamalı.
+      telefon: isletme?.telefon || null,
+      adres: isletme?.adres || null,
+      calisma_saatleri: haftalik,
+      yaklasan_tatiller: (tatiller ?? []).map((t) => ({
+        baslangic: t.baslangic_tarih,
+        bitis: t.bitis_tarih,
+        saat: t.baslangic_saat
+          ? `${String(t.baslangic_saat).slice(0, 5)}-${String(t.bitis_saat).slice(0, 5)} arası`
+          : "tüm gün",
+        aciklama: t.aciklama,
+      })),
     });
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { CalendarOff } from "lucide-react";
 import { Logo } from "./Logo";
 import IsletmeLogosu from "./IsletmeLogosu";
 import {
@@ -24,6 +25,7 @@ const MENU = [
   { href: "/admin/musteriler", label: "Müşteriler", Ikon: KisilerIkon },
   { href: "/admin/hizmetler", label: "Hizmetler", Ikon: MakasIkon },
   { href: "/admin/saatler", label: "Çalışma Saatleri", Ikon: SaatIkon },
+  { href: "/admin/tatiller", label: "Tatil Günleri", Ikon: CalendarOff },
   { href: "/admin/isletme", label: "İşletme Bilgileri", Ikon: DukkanIkon },
   { href: "/chat", label: "Botu Test Et", Ikon: SohbetIkon },
 ];

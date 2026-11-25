@@ -120,6 +120,18 @@ export const KUAFOR_TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "salon_bilgisi",
+    description: `
+      Salonun adresini, telefon numarasını, haftalık çalışma saatlerini ve yaklaşan
+      tatil/izin günlerini verir. Müşteri "neredesiniz", "telefonunuz ne", "kaçta
+      açılıyorsunuz", "pazar açık mısınız", "tatil var mı" gibi sorular sorduğunda çağır.
+    `,
+    input_schema: {
+      type: "object" as const,
+      properties: {},
+    },
+  },
+  {
     name: "randevularim_listele",
     description: `
       Müşterinin aktif (beklemede/onaylandi) randevularını listeler.

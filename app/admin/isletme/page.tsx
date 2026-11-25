@@ -7,6 +7,7 @@ import LogoYukle from "@/components/LogoYukle";
 import { ikonAnahtari } from "@/lib/isletme-ikon";
 
 interface Isletme {
+  id?: string;
   ad: string;
   telefon: string;
   adres: string;
@@ -51,6 +52,7 @@ export default function IsletmePage() {
       .then((d) => {
         if (d.hata) { setHata(d.hata); setYukleniyor(false); return; }
         setForm({
+          id: d.id,
           ad: d.ad ?? "",
           telefon: d.telefon ?? "",
           adres: d.adres ?? "",
@@ -211,6 +213,24 @@ export default function IsletmePage() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {form.id && (
+            <div className="border-t border-cizgi pt-5">
+              <p className="etiket">Müşteri aydınlatma metni (KVKK)</p>
+              <p className="text-xs text-silik mb-2">
+                Müşterilerin kişisel verilerinin nasıl işlendiğini anlatan sayfa. Bot, yeni müşteriye ilk mesajında bu bağlantıyı gönderir.
+                İstersen Instagram ya da dükkânda da paylaşabilirsin.
+              </p>
+              <a
+                href={`/gizlilik/${form.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-turuncu hover:underline break-all"
+              >
+                {typeof window !== "undefined" ? window.location.origin : ""}/gizlilik/{form.id}
+              </a>
             </div>
           )}
 

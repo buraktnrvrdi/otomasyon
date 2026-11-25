@@ -133,6 +133,25 @@ CREATE UNIQUE INDEX uyarilar_acik_konu ON uyarilar(konu) WHERE NOT okundu;
 CREATE INDEX idx_uyarilar_liste ON uyarilar(okundu, son_olusma_at DESC);
 
 -- =============================================
+-- TABLO 10: kapali_gunler (tatil / izin günleri ve saatleri)
+-- =============================================
+CREATE TABLE kapali_gunler (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  isletme_id       UUID NOT NULL REFERENCES isletme(id) ON DELETE CASCADE,
+  baslangic_tarih  DATE NOT NULL,
+  bitis_tarih      DATE NOT NULL,
+  baslangic_saat   TIME,
+  bitis_saat       TIME,
+  aciklama         TEXT,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT kapali_gunler_tarih_sirasi CHECK (bitis_tarih >= baslangic_tarih),
+  CONSTRAINT kapali_gunler_saat_cifti CHECK ((baslangic_saat IS NULL) = (bitis_saat IS NULL)),
+  CONSTRAINT kapali_gunler_saat_sirasi CHECK (baslangic_saat IS NULL OR bitis_saat > baslangic_saat)
+);
+
+CREATE INDEX idx_kapali_gunler ON kapali_gunler(isletme_id, bitis_tarih);
+
+-- =============================================
 -- ROW LEVEL SECURITY
 -- =============================================
 ALTER TABLE isletme          ENABLE ROW LEVEL SECURITY;
@@ -144,6 +163,7 @@ ALTER TABLE konusmalar       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE giris_denemeleri ENABLE ROW LEVEL SECURITY;
 ALTER TABLE islenen_mesajlar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE uyarilar ENABLE ROW LEVEL SECURITY;
+ALTER TABLE kapali_gunler ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_all" ON isletme
   FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -170,6 +190,9 @@ CREATE POLICY "service_role_all" ON islenen_mesajlar
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE POLICY "service_role_all" ON uyarilar
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON kapali_gunler
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- =============================================
