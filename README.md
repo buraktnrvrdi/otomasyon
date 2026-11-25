@@ -34,6 +34,7 @@ Mevcut veritabanı için `supabase/migrations/` altındaki dosyaları **sırayla
 | `005_hatirlatma.sql` | Hatırlatma ve Meta numara kimliği kolonları |
 | `006_salon_logo.sql` | Salon logosu kolonu, simge varsayılanı ve herkese açık `logolar` depolama alanı |
 | `007_mesaj_tekrar_kontrolu.sql` | WhatsApp mesaj tekrar kontrolü (`islenen_mesajlar`) |
+| `008_uyarilar.sql` | Süper admin panelinde gösterilen sistem uyarıları (`uyarilar`) |
 
 ### 2. Vercel
 
@@ -90,9 +91,11 @@ Değişkenler sırasıyla müşteri adı, salon adı, tarih, saat ve hizmettir.
 
 `WHATSAPP_HATIRLATMA_SABLONU` boş bırakılırsa hatırlatma gönderilmez, uygulamanın geri kalanı normal çalışır.
 
-### 5. Hata uyarıları (önerilir)
+### 5. Hata uyarıları
 
-Bot ya da WhatsApp bağlantısı bozulduğunda (token süresi dolması, mesaj teslim hatası, model hatası, şifre e-postası gitmemesi) yöneticiye bildirim gider. Aynı konu için 15 dakikada en fazla bir bildirim gelir. Kanalların hiçbiri ayarlı değilse hatalar sadece Vercel loguna yazılır.
+Bot ya da WhatsApp bağlantısı bozulduğunda (token süresi dolması, mesaj teslim hatası, model hatası, şifre e-postası gitmemesi) uyarı **süper admin panelinde** (`/super`, "Sistem uyarıları") görünür. Aynı konudaki okunmamış uyarılar tek satırda toplanır ve "kaç kez" sayacı artar; "Okundu" dedikten sonra aynı sorun tekrar olursa yeniden uyarı düşer. Panel açıkken 30 saniyede bir kendini günceller. Okunmuş uyarılar 30 gün sonra silinir.
+
+Paneli açmadığın zamanlarda da haberdar olmak istersen isteğe bağlı bir dış kanal ekleyebilirsin (aynı konu için 15 dakikada en fazla bir bildirim):
 
 - **Telegram:** @BotFather ile bir bot oluştur, `TELEGRAM_BOT_TOKEN` değerini al. Bota bir mesaj yazıp `https://api.telegram.org/bot<TOKEN>/getUpdates` adresinden `chat.id` değerini bul ve `TELEGRAM_CHAT_ID` olarak gir.
 - **Slack / Discord:** gelen-webhook adresini `UYARI_WEBHOOK_URL` olarak gir.
