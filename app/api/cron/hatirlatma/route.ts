@@ -33,7 +33,19 @@ export async function GET(req: NextRequest) {
   await gecmisleriTamamla();
 
   // Hız sınırı ve tekrar kontrolü kayıtları şişmesin.
-  await Promise.allSettled([eskileriTemizle(), eskiMesajlariTemizle()]);
+  await Promise.allSettled([
+    eskileriTemizle(),
+    eskiMesajlariTemizle(),
+    // Okunmuş uyarılar 30 gün sonra silinir.
+    (async () => {
+      const db = await createServerClient();
+      await db
+        .from("uyarilar")
+        .delete()
+        .eq("okundu", true)
+        .lt("son_olusma_at", new Date(Date.now() - 30 * 24 * 3600_000).toISOString());
+    })(),
+  ]);
 
   const sablon = process.env.WHATSAPP_HATIRLATMA_SABLONU;
   if (!sablon) {

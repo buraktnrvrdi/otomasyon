@@ -14,6 +14,14 @@ interface DavetKodu {
   olusturuldu_at: string;
 }
 
+interface Uyari {
+  id: string;
+  baslik: string;
+  detay: string | null;
+  adet: number;
+  son_olusma_at: string;
+}
+
 export default function SuperPage() {
   const router = useRouter();
   const [kodlar, setKodlar] = useState<DavetKodu[]>([]);
@@ -21,6 +29,8 @@ export default function SuperPage() {
   const [yeniKod, setYeniKod] = useState<string | null>(null);
   const [hata, setHata] = useState("");
   const [kopyalandi, setKopyalandi] = useState<string | null>(null);
+  const [uyarilar, setUyarilar] = useState<Uyari[]>([]);
+  const [uyariHazir, setUyariHazir] = useState(true);
 
   async function yukle() {
     const r = await fetch("/api/super/kodlar", { cache: "no-store" });
@@ -29,7 +39,31 @@ export default function SuperPage() {
     setKodlar(await r.json());
   }
 
-  useEffect(() => { yukle(); }, []);
+  async function uyariYukle() {
+    const r = await fetch("/api/super/uyarilar", { cache: "no-store" });
+    if (r.status === 401) { router.replace("/super/login"); return; }
+    if (!r.ok) return;
+    const json = await r.json();
+    setUyarilar(json.uyarilar ?? []);
+    setUyariHazir(json.hazir !== false);
+  }
+
+  async function okunduYap(govde: { id: string } | { hepsi: true }) {
+    await fetch("/api/super/uyarilar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(govde),
+    });
+    uyariYukle();
+  }
+
+  useEffect(() => {
+    yukle();
+    uyariYukle();
+    // Yeni uyarılar sayfayı yenilemeden görünsün.
+    const id = setInterval(uyariYukle, 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   async function kodUret() {
     setYukleniyor(true);
@@ -69,6 +103,49 @@ export default function SuperPage() {
             Çıkış
           </button>
         </div>
+
+        <section className="mb-10" aria-labelledby="uyarilar-baslik">
+          <div className="flex items-center justify-between mb-3">
+            <h2 id="uyarilar-baslik" className="etiket flex items-center gap-2">
+              Sistem uyarıları
+              {uyarilar.length > 0 && <span className="rozet rozet-turuncu">{uyarilar.length}</span>}
+            </h2>
+            {uyarilar.length > 1 && (
+              <button onClick={() => okunduYap({ hepsi: true })} className="btn btn-cizgili btn-kucuk">
+                Hepsini okundu yap
+              </button>
+            )}
+          </div>
+
+          {!uyariHazir ? (
+            <p className="uyari-kutusu">
+              Uyarı tablosu henüz yok. Supabase'de <code>008_uyarilar.sql</code> dosyasını çalıştır.
+            </p>
+          ) : uyarilar.length === 0 ? (
+            <div className="kart p-5 flex items-center gap-3 text-soluk text-sm">
+              <TikIkon className="w-4 h-4 text-basari" />
+              Her şey yolunda, okunmamış uyarı yok.
+            </div>
+          ) : (
+            <ul className="space-y-2.5">
+              {uyarilar.map((u) => (
+                <li key={u.id} className="kart p-4 border-turuncu/30 flex flex-wrap items-start gap-3">
+                  <div className="flex-1 min-w-[14rem]">
+                    <p className="font-semibold">
+                      {u.baslik}
+                      {u.adet > 1 && <span className="rozet rozet-gri ml-2">{u.adet} kez</span>}
+                    </p>
+                    {u.detay && <p className="text-sm text-soluk mt-1 break-words">{u.detay}</p>}
+                    <p className="text-xs text-silik mt-1.5">Son: {tarihSaatMetni(new Date(u.son_olusma_at))}</p>
+                  </div>
+                  <button onClick={() => okunduYap({ id: u.id })} className="btn btn-cizgili btn-kucuk">
+                    Okundu
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <SayfaBasligi baslik="Davet" vurgu="kodları" aciklama="Yeni salonlar bu kodlarla kayıt olur">
           <button onClick={kodUret} disabled={yukleniyor} className="btn btn-ana">

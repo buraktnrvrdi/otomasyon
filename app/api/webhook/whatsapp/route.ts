@@ -73,7 +73,7 @@ async function mesajiIsle(payload: WhatsAppMessage) {
     const hak = await botHakki(isletmeId, payload.from);
     if (hak !== "tamam") {
       if (hak === "salon") {
-        await uyar("Salonun günlük bot mesaj sınırı doldu", `isletme=${isletmeId}`, `salon-sinir-${isletmeId}`, 360);
+        await uyar("Salonun günlük bot mesaj sınırı doldu", `isletme=${isletmeId}`, `salon-sinir-${isletmeId}`, 360, isletmeId);
       }
       if (await uyariGonderilsinMi(isletmeId, payload.from)) {
         await mesajGonder(payload.from, hak === "salon" ? YOGUN_MESAJI : SINIR_MESAJI, gonderen);

@@ -112,6 +112,24 @@ CREATE TABLE islenen_mesajlar (
 CREATE INDEX idx_islenen_mesajlar_zaman ON islenen_mesajlar(olusturuldu_at);
 
 -- =============================================
+-- TABLO 9: uyarilar (süper admin panelinde gösterilen sistem uyarıları)
+-- =============================================
+CREATE TABLE uyarilar (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  konu            TEXT NOT NULL,
+  baslik          TEXT NOT NULL,
+  detay           TEXT,
+  isletme_id      UUID REFERENCES isletme(id) ON DELETE SET NULL,
+  adet            INT NOT NULL DEFAULT 1,
+  okundu          BOOLEAN NOT NULL DEFAULT FALSE,
+  olusturuldu_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  son_olusma_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX uyarilar_acik_konu ON uyarilar(konu) WHERE NOT okundu;
+CREATE INDEX idx_uyarilar_liste ON uyarilar(okundu, son_olusma_at DESC);
+
+-- =============================================
 -- ROW LEVEL SECURITY
 -- =============================================
 ALTER TABLE isletme          ENABLE ROW LEVEL SECURITY;
@@ -122,6 +140,7 @@ ALTER TABLE davet_kodlari    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE konusmalar       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE giris_denemeleri ENABLE ROW LEVEL SECURITY;
 ALTER TABLE islenen_mesajlar ENABLE ROW LEVEL SECURITY;
+ALTER TABLE uyarilar ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "service_role_all" ON isletme
   FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -145,6 +164,9 @@ CREATE POLICY "service_role_all" ON giris_denemeleri
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 CREATE POLICY "service_role_all" ON islenen_mesajlar
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+CREATE POLICY "service_role_all" ON uyarilar
   FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- =============================================
