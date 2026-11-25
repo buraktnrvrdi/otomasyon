@@ -17,6 +17,7 @@ interface Isletme {
   bildirim_eposta_acik: boolean;
   bildirim_whatsapp: string;
   bildirim_whatsapp_acik: boolean;
+  ozet_eposta_acik: boolean;
 }
 
 function Anahtar({ acik, onDegisti, etiket }: { acik: boolean; onDegisti: (v: boolean) => void; etiket: string }) {
@@ -37,10 +38,11 @@ function Anahtar({ acik, onDegisti, etiket }: { acik: boolean; onDegisti: (v: bo
 export default function IsletmePage() {
   const [form, setForm] = useState<Isletme>({
     ad: "", telefon: "", adres: "", ikon: "makas", whatsapp_no: "", logo_url: null,
-    bildirim_eposta_acik: true, bildirim_whatsapp: "", bildirim_whatsapp_acik: false,
+    bildirim_eposta_acik: true, bildirim_whatsapp: "", bildirim_whatsapp_acik: false, ozet_eposta_acik: true,
   });
   // Bildirim kolonları yoksa (migration 009 çalıştırılmadıysa) bölüm gizlenir ve gönderilmez.
   const [bildirimHazir, setBildirimHazir] = useState(true);
+  const [ozetHazir, setOzetHazir] = useState(true);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [hata, setHata] = useState("");
   const [kaydediliyor, setKaydediliyor] = useState(false);
@@ -62,7 +64,9 @@ export default function IsletmePage() {
           bildirim_eposta_acik: d.bildirim_eposta_acik !== false,
           bildirim_whatsapp: d.bildirim_whatsapp ?? "",
           bildirim_whatsapp_acik: d.bildirim_whatsapp_acik === true,
+          ozet_eposta_acik: d.ozet_eposta_acik !== false,
         });
+        setOzetHazir("ozet_eposta_acik" in d);
         setBildirimHazir("bildirim_eposta_acik" in d);
         setYukleniyor(false);
       })
@@ -76,9 +80,14 @@ export default function IsletmePage() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
-        bildirimHazir
-          ? form
-          : { ad: form.ad, telefon: form.telefon, adres: form.adres, ikon: form.ikon, whatsapp_no: form.whatsapp_no }
+        (() => {
+          const { id: _id, bildirim_eposta_acik, bildirim_whatsapp, bildirim_whatsapp_acik, ozet_eposta_acik, ...temel } = form;
+          return {
+            ...temel,
+            ...(bildirimHazir ? { bildirim_eposta_acik, bildirim_whatsapp, bildirim_whatsapp_acik } : {}),
+            ...(ozetHazir ? { ozet_eposta_acik } : {}),
+          };
+        })()
       ),
     });
     const json = await r.json().catch(() => ({}));
@@ -213,6 +222,22 @@ export default function IsletmePage() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {ozetHazir && (
+            <div className="border-t border-cizgi pt-6 flex items-center justify-between gap-4">
+              <div>
+                <p className="etiket">Haftalık özet e-postası</p>
+                <p className="text-xs text-silik">
+                  Her Pazartesi sabahı geçen haftanın randevu sayısı, cirosu ve önümüzdeki haftanın durumu giriş e-postana gelir.
+                </p>
+              </div>
+              <Anahtar
+                acik={form.ozet_eposta_acik}
+                onDegisti={(v) => setForm({ ...form, ozet_eposta_acik: v })}
+                etiket="Haftalık özet e-postası"
+              />
             </div>
           )}
 

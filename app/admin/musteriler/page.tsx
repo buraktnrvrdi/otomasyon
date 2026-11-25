@@ -8,6 +8,8 @@ import { redirect } from "next/navigation";
 import { kimlikGoster } from "@/lib/whatsapp/kimlik";
 import SayfaBasligi from "@/components/SayfaBasligi";
 import MusteriSilButonu from "./MusteriSilButonu";
+import MusteriNotu from "./MusteriNotu";
+import { notlariGetir } from "@/lib/musteri-notlari";
 import { SILINMIS_ON_EK } from "@/lib/kvkk";
 
 interface MusteriSatir {
@@ -52,6 +54,8 @@ export default async function MusterilerPage() {
     (a, b) => new Date(b.son_randevu).getTime() - new Date(a.son_randevu).getTime()
   );
 
+  const notlar = await notlariGetir(isletme_id, musteriler.map((m) => m.musteri_whatsapp));
+
   return (
     <div>
       <SayfaBasligi
@@ -71,6 +75,7 @@ export default async function MusterilerPage() {
                   <th>Numara</th>
                   <th>Randevu</th>
                   <th>Son Randevu</th>
+                  <th>Not</th>
                   <th />
                 </tr>
               </thead>
@@ -91,6 +96,13 @@ export default async function MusterilerPage() {
                     </td>
                     <td className="text-soluk text-xs whitespace-nowrap tabular-nums">
                       {tarihSaatMetni(new Date(m.son_randevu))}
+                    </td>
+                    <td>
+                      {!m.musteri_whatsapp.startsWith(SILINMIS_ON_EK) && !m.musteri_whatsapp.startsWith("web-") ? (
+                        <MusteriNotu musteriWhatsapp={m.musteri_whatsapp} notu={notlar[m.musteri_whatsapp] ?? null} />
+                      ) : (
+                        <span className="text-silik text-sm">-</span>
+                      )}
                     </td>
                     <td>
                       {!m.musteri_whatsapp.startsWith(SILINMIS_ON_EK) && !m.musteri_whatsapp.startsWith("web-") && (

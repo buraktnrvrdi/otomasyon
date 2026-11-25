@@ -61,6 +61,21 @@ export function uzunTarihMetni(d: Date = new Date()): string {
   }).format(d);
 }
 
+/** Hatırlatma cümlesi için: "bugün", "yarın" ya da "27 Kasım Cuma günü" (işletme saatine göre) */
+export function gorelGunMetni(d: Date, simdi: Date = new Date()): string {
+  const hedef = yerelTarih(d);
+  const bugun = yerelTarih(simdi);
+  if (hedef === bugun) return "bugün";
+  if (hedef === gunEkle(bugun, 1)) return "yarın";
+  const metin = new Intl.DateTimeFormat("tr-TR", {
+    timeZone: SAAT_DILIMI,
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+  }).format(d);
+  return `${metin} günü`;
+}
+
 /** Gün başından itibaren geçen dakika (işletme saatine göre) */
 export function yerelDakika(d: Date): number {
   const p = yerelParcalar(d);

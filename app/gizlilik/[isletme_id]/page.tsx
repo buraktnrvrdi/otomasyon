@@ -65,6 +65,7 @@ export default async function GizlilikSayfasi({ params }: { params: Promise<{ is
               <li>Kimlik: adınız ve soyadınız</li>
               <li>İletişim: WhatsApp telefon numaranız (ya da WhatsApp&apos;ın verdiği kullanıcı kimliği)</li>
               <li>Müşteri işlemi: aldığınız hizmet, randevu tarihi ve saati, varsa notunuz, randevu durumu (tamamlandı, iptal vb.)</li>
+              <li>Salonun hizmetin gereği olarak tuttuğu notlar (ör. saç tipi, hassasiyetler)</li>
               <li>İşlem güvenliği: asistanla yaptığınız yazışmaların içeriği</li>
             </ul>
           </Bolum>

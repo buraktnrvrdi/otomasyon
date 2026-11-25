@@ -43,5 +43,7 @@ export async function musteriVerisiniSil(isletmeId: string, musteriNo: string): 
   if (error) return { ok: false, durum: 500, hata: "Silinemedi." };
 
   await db.from("konusmalar").delete().eq("isletme_id", isletmeId).eq("musteri_no", musteriNo);
+  // Salonun tuttuğu özel not da kişisel veridir (tablo yoksa hata yok sayılır).
+  await db.from("musteri_notlari").delete().eq("isletme_id", isletmeId).eq("musteri_whatsapp", musteriNo);
   return { ok: true, anonimlestirilen: data?.length ?? 0 };
 }
