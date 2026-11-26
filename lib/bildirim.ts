@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { sablonGonder } from "@/lib/whatsapp/sender";
+import { PROAKTIF_MESAJLAR_ACIK } from "@/lib/proaktif";
 import { epostaAyarliMi, salonSahibineEpostaGonder } from "@/lib/eposta";
 import { uzunTarihMetni, yerelSaat } from "@/lib/utils/zaman";
 import { uyar } from "@/lib/uyari";
@@ -64,7 +65,7 @@ export async function berbereBildir(isletmeId: string, olay: BildirimOlayi): Pro
     }
 
     const sablon = process.env.WHATSAPP_BILDIRIM_SABLONU;
-    if (waAcik && sablon) {
+    if (PROAKTIF_MESAJLAR_ACIK && waAcik && sablon) {
       isler.push(
         // Şablon: "Randevu bildirimi: {{1}}. Müşteri: {{2}}, hizmet: {{3}}, zaman: {{4}}. Detaylar panelde."
         sablonGonder(
