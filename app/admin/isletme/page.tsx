@@ -5,6 +5,7 @@ import SayfaBasligi from "@/components/SayfaBasligi";
 import IkonSecici from "@/components/IkonSecici";
 import LogoYukle from "@/components/LogoYukle";
 import { ikonAnahtari } from "@/lib/isletme-ikon";
+import { PROAKTIF_MESAJLAR_ACIK } from "@/lib/proaktif";
 
 interface Isletme {
   id?: string;
@@ -180,7 +181,7 @@ export default function IsletmePage() {
               <div>
                 <p className="etiket">Yeni randevu bildirimi</p>
                 <p className="text-xs text-silik">
-                  Müşteri WhatsApp'tan randevu aldığında, iptal ettiğinde ya da değiştirdiğinde sana haber verilir.
+                  Müşteri randevu aldığında, iptal ettiğinde ya da değiştirdiğinde sana haber verilir.
                 </p>
               </div>
 
@@ -196,6 +197,7 @@ export default function IsletmePage() {
                 />
               </div>
 
+              {PROAKTIF_MESAJLAR_ACIK && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4">
                   <div>
@@ -222,6 +224,7 @@ export default function IsletmePage() {
                   </p>
                 </div>
               </div>
+              )}
             </div>
           )}
 

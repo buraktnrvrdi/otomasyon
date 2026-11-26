@@ -8,6 +8,7 @@ import { gorelGunMetni, yerelSaat } from "@/lib/utils/zaman";
 import { eskileriTemizle } from "@/lib/sinirlayici";
 import { eskiMesajlariTemizle } from "@/lib/tekrar";
 import { uyar } from "@/lib/uyari";
+import { PROAKTIF_MESAJLAR_ACIK } from "@/lib/proaktif";
 
 /** Günde bir kez çalışınca ertesi günün akşamına kadar olan randevuları kapsar. */
 const PENCERE_SAAT = 36;
@@ -43,6 +44,10 @@ export async function GET(req: NextRequest) {
         .lt("son_olusma_at", new Date(Date.now() - 30 * 24 * 3600_000).toISOString());
     })(),
   ]);
+
+  if (!PROAKTIF_MESAJLAR_ACIK) {
+    return NextResponse.json({ atlandi: "Kendiliğinden mesaj gönderme kapalı" });
+  }
 
   const sablon = process.env.WHATSAPP_HATIRLATMA_SABLONU;
   if (!sablon) {

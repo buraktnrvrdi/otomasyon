@@ -81,7 +81,9 @@ Webhook adresi: `https://<alan-adin>/api/webhook/whatsapp`
 
 **Her salon için:** Admin paneli > İşletme Bilgileri > "WhatsApp Bot Numarası" alanına, müşterilerin yazacağı numarayı `+90...` biçiminde gir. Gelen mesajlar bu numaraya göre doğru salona yönlenir.
 
-### 4. Hatırlatma şablonu (isteğe bağlı)
+### 4. Hatırlatma şablonu (isteğe bağlı, varsayılan kapalı)
+
+Kendiliğinden mesaj gönderme (müşteri hatırlatması ve salon sahibine WhatsApp bildirimi) **varsayılan olarak kapalıdır**; uygulama yalnızca gelen mesajlara cevap verir. Açmak için Vercel'de `NEXT_PUBLIC_PROAKTIF_MESAJLAR=acik` ayarla ve yeniden deploy et. E-posta bildirimleri bundan etkilenmez.
 
 WhatsApp, müşteri son 24 saatte yazmadıysa serbest mesaja izin vermez. Hatırlatma için onaylı bir şablon gerekir. Örnek metin:
 
