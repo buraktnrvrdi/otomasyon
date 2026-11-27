@@ -9,6 +9,17 @@ Kuaför ve berber salonları için WhatsApp üzerinden randevu alan bir bot ve s
 
 Teknolojiler: Next.js 16, Supabase (Postgres + Auth), Groq veya Anthropic (bot), Twilio veya Meta Cloud API (WhatsApp).
 
+## Ekran görüntüleri
+
+Salon paneli ve bot test sohbeti (test verisiyle alınmıştır).
+
+| | |
+|---|---|
+| ![Giriş](docs/ekran-goruntuleri/01-giris.webp)<br>Giriş | ![Randevular](docs/ekran-goruntuleri/07-randevular.webp)<br>Randevular |
+| ![Hizmetler](docs/ekran-goruntuleri/02-hizmetler.webp)<br>Hizmetler ve fiyatlar | ![Çalışma saatleri](docs/ekran-goruntuleri/03-calisma-saatleri.webp)<br>Çalışma saatleri |
+| ![İşletme bilgileri](docs/ekran-goruntuleri/04-isletme-bilgileri.webp)<br>İşletme bilgileri | ![Bot testi](docs/ekran-goruntuleri/05-bot-testi-sohbet.webp)<br>Bot ile sohbet |
+| ![Randevu oluştu](docs/ekran-goruntuleri/06-bot-testi-randevu-olustu.webp)<br>Randevu oluşturuldu | |
+
 ## Yerelde çalıştırma
 
 ```bash
